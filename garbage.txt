@@ -1,0 +1,545 @@
+Negative Brand Signal Monitor
+------------------------------
+Industry 
+Direct-to-Consumer (DTC) Brands 
+ 
+Company Size 
+5–50 employees 
+ 
+Location 
+Mostly North America and Europe 
+ 
+Business Needs 
+● Catch early signs of bad brand mentions 
+● Monitor Reddit, Quora, etc 
+● Understand what customers are upset or confused about 
+● Respond before things go viral or hurt sales 
+ 
+Tech Level 
+Medium 
+ 
+Decision Makers 
+Founders 
+ 
+Pain Points 
+● Don’t know when people are talking negatively until it’s too late 
+● Bad press or viral complaints hurt trust and conversion 
+● Reactive Reputation Management 
+● Virality Moves Faster Than Teams 
+● Fragmented Feedback Channels 
+● Misinterpreted Customer Signals 
+● Manual Monitoring is Unsustainable 
+ 
+Brand Behavior 
+● Speed-Obsessed  
+● Image-First Culture 
+● Open to AI, Not Enterprise 
+ 
+AI Opportunities 
+● Multichannel Sentiment Sniffing 
+● Sarcasm & Meme Detection Layer 
+● Velocity (mentions per hour) 
+● Language (negative, sarcastic, confused, angry) 
+● AI-Powered Rapid Response Assistant 
+ 
+Proposed Technical Solution 
+ 
+Using Model Context Protocol (MCP) to detect and prioritize negative signals across key online channels 
+ 
+Architecture Overview - Automated 
+[MCP Feeds (Reddit, Quora)]→ [Signal Processor]→[Sentiment + Sarcasm Engine]→[Priority Queue]→[Response Assistant + Dashboard] 
+ 
+Ingestion Layer (via MCP)- Automated Data Flow 
+● Feeds: Reddit, Quora 
+● MCP standardizes content (post body, comments, metadata)  
+● Filter by brand mentions (fuzzy matching, brand aliases)  
+ 
+Signal Processor - Fully Automated Processing 
+● Lightweight service (Python/Node)  
+● Tags incoming content:  
+○ Source  
+○ Thread popularity  
+○ Mention velocity  
+ 
+Sentiment + Sarcasm Engine - Fully Automated 
+● Fine-tuned transformer (e.g., Distil Roberta or LLaMA2-lite)  
+● Output tags:  
+○ Sentiment: Negative / Neutral / Positive  
+○ Tone: Angry, Confused, Sarcastic  
+○ Intent: Complaint, Question, Rant, Meme  
+ 
+Velocity + Virality Scoring - Fully Automated 
+● Risk Score = Sentiment Weight × Tone Intensity × Virality  
+● Detect spikes in mention frequency and engagement rates  
+● Rapid Response Assistant 
+ 
+GPT-powered - Fully Automated copilot to :  
+● Suggest responses  
+● Recommend an engagement strategy  
+● Surface similar past issues  
+ 
+Dashboard UI  - Real-Time Automated Monitoring: 
+● Real-Time Alerts with Risk Score  
+● Top Negative Threads  
+● Sentiment Timeline
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Key Points
+------------------------------
+1. Scheduler: Vercel Cron Jobs 
+https://vercel.com/docs/cron-jobs
+https://vercel.com/pricing 
+
+2. Backend Logic: Node.js within Vercel Serverless Functions
+Node.js: https://nodejs.org/
+Vercel Functions: https://vercel.com/docs/functions/serverless-functions
+Vercel Pricing/Limits: https://vercel.com/pricing
+
+3. Frontend & Hosting: React/Next.js on Vercel 
+React: https://react.dev/
+Next.js (by Vercel): https://nextjs.org/
+Vercel Hosting/Pricing: https://vercel.com/pricing
+
+4. Database: Vercel Postgres or Supabase 
+Vercel Postgres: https://vercel.com/storage/postgres
+Supabase: https://supabase.com/pricing
+
+5. Data Source: Reddit API 
+https://www.reddit.com/dev/api/
+
+6. Sentiment/Tone Analysis: Hugging Face Inference API 
+https://huggingface.co/docs/api-inference/index
+https://www.google.com/search?q=https://huggingface.co/pricing%23inference-api
+
+7. Response Assistance: Google Gemini API or similar 
+Google AI / Gemini API: https://ai.google.dev/pricing 
+Alternative (Anthropic): https://www.anthropic.com/pricing
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Flow Map:
+------------------------------
+1. Scheduled Fetching:
+Vercel Cron Job -> Vercel Function (Node.js) -> Reddit API (Get Mentions) -> Free Tier DB (Save Raw Mention)
+
+2. Sentiment Analysis (Triggered or Batched):
+DB Trigger / Vercel Cron Job -> Vercel Function (Node.js) -> Hugging Face API (Analyze Text) -> Free Tier DB (Update Mention with Sentiment/Tone)
+
+3. Risk Scoring (Scheduled):
+Vercel Cron Job -> Vercel Function (Node.js) -> Free Tier DB (Read Analyzed Mentions) -> Calculate Velocity/Virality/Risk Score -> Free Tier DB (Update Mention with Risk Score)
+
+4. Dashboard Display:
+User -> Next.js Frontend (on Vercel) -> Vercel Function (API Route) -> Free Tier DB (Read Scored/Prioritized Mentions) -> Display Data to User
+
+5. AI Response Assistance (User Triggered):
+User (Clicks Assist Button on Dashboard) -> Vercel Function (API Route) -> Free Tier DB (Get Mention Context) -> Free Tier LLM API (e.g., Gemini - Generate Suggestion) -> Return Suggestion to Dashboard
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+file structure:
+---------------
+1. app(components, lib ,globals.css, layout.js, page.js )
+2. components(Dashboard.jsx, ErrorDisplay.jsx, LoadingSpinner.jsx, Mentionltem.jsx, MentionList.jsx, ResponseAssistant.jsx, SentimentBadge.jsx)
+3. lib(api.js)
+4. "dependencies": {"react": "^19.0.0","react-dom": "^19.0.0","next": "15.3.1"}
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Dashboard.jsx
+---------------
+// app/components/Dashboard.jsx
+'use client'; // Mark as a Client Component
+
+import React, { useState, useEffect, useCallback } from 'react';
+import MentionList from './MentionList';
+import ResponseAssistant from './ResponseAssistant';
+import LoadingSpinner from './LoadingSpinner';
+import ErrorDisplay from './ErrorDisplay';
+import { fetchMentions, fetchAssistance } from '../lib/api'; // Import API functions
+
+const POLLING_INTERVAL = 30000; // Fetch new data every 30 seconds (adjust as needed)
+
+export default function Dashboard() {
+    const [mentions, setMentions] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [selectedMention, setSelectedMention] = useState(null); // For AI Assistant
+    const [isAssistantLoading, setIsAssistantLoading] = useState(false);
+    const [assistantResponse, setAssistantResponse] = useState(null);
+    const [assistantError, setAssistantError] = useState(null);
+
+    // Function to fetch mentions data
+    const loadMentions = useCallback(async () => {
+        // Don't refetch if already loading or assistant is open/loading
+        if (isLoading || selectedMention || isAssistantLoading) return;
+
+        // console.log("Fetching mentions..."); // For debugging
+        setIsLoading(true);
+        setError(null);
+        try {
+            const fetchedMentions = await fetchMentions();
+            // Sort mentions by Risk Score (descending) - Assuming higher is worse
+            // Adjust sorting based on your actual risk score logic
+            const sortedMentions = fetchedMentions.sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0));
+            setMentions(sortedMentions);
+        } catch (err) {
+            setError(err.message || 'Failed to load mentions.');
+            setMentions([]); // Clear potentially stale data on error
+        } finally {
+            setIsLoading(false);
+        }
+    }, [isLoading, selectedMention, isAssistantLoading]); // Dependencies for useCallback
+
+
+    // Initial fetch and polling
+    useEffect(() => {
+        loadMentions(); // Initial fetch
+
+        // Set up polling interval
+        const intervalId = setInterval(loadMentions, POLLING_INTERVAL);
+
+        // Cleanup function to clear interval on component unmount
+        return () => clearInterval(intervalId);
+    }, [loadMentions]); // Run effect when loadMentions function identity changes
+
+
+    // Handler for clicking the 'Assist' button on a mention
+    const handleAssistClick = useCallback(async (mention) => {
+        if (!mention || isAssistantLoading) return;
+
+        // console.log("Assist requested for:", mention.id); // Debugging
+        setSelectedMention(mention);
+        setAssistantResponse(null); // Clear previous response
+        setAssistantError(null); // Clear previous error
+        setIsAssistantLoading(true);
+
+        try {
+            // Prepare context (adjust based on what your LLM needs)
+            const context = {
+                text: mention.text,
+                source: mention.source,
+                url: mention.url,
+                sentiment: mention.sentiment,
+                tone: mention.tone,
+                threadPopularity: mention.threadPopularity, // Add other relevant fields
+            };
+            const response = await fetchAssistance(mention.id, context);
+            setAssistantResponse(response);
+        } catch (err) {
+            setAssistantError(err.message || 'Failed to get assistance.');
+            setAssistantResponse(null); // Clear response data on error
+        } finally {
+            setIsAssistantLoading(false);
+        }
+    }, [isAssistantLoading]); // Dependency for useCallback
+
+    // Handler to close the assistant view
+    const handleCloseAssistant = () => {
+        setSelectedMention(null);
+        setAssistantResponse(null);
+        setAssistantError(null);
+    };
+
+    // --- Render Logic ---
+    if (isLoading && mentions.length === 0) { // Show initial loading spinner
+        return <LoadingSpinner />;
+    }
+
+    if (error && mentions.length === 0) { // Show error if initial load failed
+        return <ErrorDisplay message={error} onRetry={loadMentions} />;
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Optional: Display general error/loading status even when data exists */}
+            {error && !selectedMention && <ErrorDisplay message={`Update failed: ${error}`} isMinor={true} />}
+            {isLoading && !selectedMention && <div className="text-sm text-gray-500">Updating...</div>}
+
+            {/* AI Response Assistant Modal/Section */}
+            {selectedMention && (
+                <ResponseAssistant
+                    mention={selectedMention}
+                    response={assistantResponse}
+                    isLoading={isAssistantLoading}
+                    error={assistantError}
+                    onClose={handleCloseAssistant}
+                />
+            )}
+
+            {/* Mentions List Section - Don't render list if assistant is open? Or grey it out? */}
+            <div className={selectedMention ? 'opacity-50 pointer-events-none' : ''}>
+                <h2 className="text-2xl font-semibold mb-4 text-gray-700">Negative Signal Feed</h2>
+                {mentions.length > 0 ? (
+                    <MentionList mentions={mentions} onAssistClick={handleAssistClick} />
+                ) : (
+                    <p className="text-gray-500 italic">No negative mentions detected currently.</p>
+                )}
+            </div>
+        </div>
+    );
+}
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ErrorDisplay.jsx
+---------------
+// app/components/ErrorDisplay.jsx
+import React from 'react';
+
+export default function ErrorDisplay({ message, onRetry, isMinor = false }) {
+    const baseClasses = "p-4 rounded-md border";
+    const colorClasses = isMinor
+        ? "bg-yellow-50 border-yellow-300 text-yellow-800"
+        : "bg-red-50 border-red-300 text-red-800";
+
+    return (
+        <div className={`${baseClasses} ${colorClasses}`} role="alert">
+            <p>
+                <span className="font-medium">{isMinor ? 'Warning:' : 'Error:'}</span> {message || 'An unexpected error occurred.'}
+            </p>
+            {onRetry && !isMinor && (
+                <button
+                    onClick={onRetry}
+                    className="mt-2 text-sm font-medium text-red-700 hover:underline"
+                >
+                    Try again
+                </button>
+            )}
+        </div>
+    );
+}
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+LoadingSpinner.jsx
+---------------
+// app/components/LoadingSpinner.jsx
+import React from 'react';
+
+export default function LoadingSpinner({ text = 'Loading...' }) {
+    return (
+        <div className="flex items-center justify-center p-4 space-x-2">
+            <div className="w-6 h-6 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+            <span className="text-gray-600">{text}</span>
+        </div>
+    );
+}
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Mentionltem.jsx
+---------------
+// app/components/MentionItem.jsx
+import React from 'react';
+import SentimentBadge from './SentimentBadge';
+
+// Helper to format dates (you might want a more robust library like date-fns)
+const formatDate = (isoString) => {
+    if (!isoString) return 'N/A';
+    try {
+        return new Date(isoString).toLocaleString();
+    } catch (e) {
+        return 'Invalid Date';
+    }
+};
+
+
+export default function MentionItem({ mention, onAssistClick }) {
+    // Destructure expected properties from the mention object
+    const {
+        id,
+        text,
+        source,
+        url,
+        sentiment,
+        tone,
+        intent,
+        riskScore,
+        timestamp,
+        threadPopularity, // Example extra data
+        velocity // Example extra data
+    } = mention;
+
+    // Basic risk score styling (adjust thresholds and colors)
+    const getRiskColor = (score) => {
+        if (score >= 75) return 'text-red-600 font-bold';
+        if (score >= 50) return 'text-yellow-600 font-semibold';
+        if (score >= 25) return 'text-blue-600';
+        return 'text-gray-500';
+    };
+
+    return (
+        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow duration-200">
+            <div className="flex justify-between items-start mb-2">
+                <div>
+                    <span className="font-semibold text-lg mr-2 capitalize">{source || 'Unknown Source'}</span>
+                    <span className={`text-sm ${getRiskColor(riskScore)}`}>
+                        Risk: {riskScore?.toFixed(0) ?? 'N/A'}
+                    </span>
+                </div>
+                <span className="text-xs text-gray-500">{formatDate(timestamp)}</span>
+            </div>
+
+            <p className="text-gray-800 mb-3 leading-relaxed line-clamp-3">{text || 'No content available.'}</p> {/* Limit initial text display */}
+
+            <div className="flex flex-wrap gap-2 items-center mb-3 text-sm">
+                <SentimentBadge type="sentiment" value={sentiment} />
+                <SentimentBadge type="tone" value={tone} />
+                <SentimentBadge type="intent" value={intent} />
+                {/* Display other metadata */}
+                {velocity !== undefined && <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">Velocity: {velocity.toFixed(1)}/hr</span>}
+                {threadPopularity !== undefined && <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">Popularity: {threadPopularity}</span>}
+            </div>
+
+
+            <div className="flex justify-between items-center mt-2">
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
+                    onClick={(e) => e.stopPropagation()} // Prevent card click if link is clicked
+                >
+                    View Source
+                </a>
+                <button
+                    onClick={() => onAssistClick(mention)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1 px-3 rounded-md transition duration-150 ease-in-out"
+                    aria-label={`Get AI assistance for mention ${id}`}
+                >
+                    Suggest Response
+                </button>
+            </div>
+        </div>
+    );
+}
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+MentionList.jsx
+---------------
+// app/components/MentionList.jsx
+import React from 'react';
+import MentionItem from './MentionItem';
+
+export default function MentionList({ mentions, onAssistClick }) {
+    if (!mentions || mentions.length === 0) {
+        return <p className="text-center text-gray-500 py-4">No mentions to display.</p>;
+    }
+
+    return (
+        <div className="space-y-4">
+            {mentions.map((mention) => (
+                <MentionItem
+                    key={mention.id} // Make sure each mention has a unique ID from the backend
+                    mention={mention}
+                    onAssistClick={onAssistClick}
+                />
+            ))}
+        </div>
+    );
+}
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ResponseAssistant.jsx
+----------------------
+// app/components/ResponseAssistant.jsx
+import React from 'react';
+import LoadingSpinner from './LoadingSpinner';
+import ErrorDisplay from './ErrorDisplay';
+
+export default function ResponseAssistant({ mention, response, isLoading, error, onClose }) {
+    if (!mention) return null; // Don't render if no mention is selected
+
+    return (
+        // Basic Modal structure using Tailwind (you might prefer a dedicated modal library)
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
+                <button
+                    onClick={onClose}
+                    className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-2xl font-bold"
+                    aria-label="Close assistant"
+                >
+                    &times; {/* Close icon */}
+                </button>
+
+                <h3 className="text-xl font-semibold mb-4 text-gray-800">AI Response Assistant</h3>
+
+                {/* Original Mention Context */}
+                <div className="mb-4 p-3 bg-gray-50 rounded border border-gray-200">
+                    <h4 className="font-semibold text-sm mb-1 text-gray-600">Original Mention:</h4>
+                    <p className="text-sm text-gray-700 mb-1 italic">"{mention.text}"</p>
+                    <p className="text-xs text-gray-500">Source: {mention.source} | Sentiment: {mention.sentiment} | Tone: {mention.tone}</p>
+                    {mention.url && <a href={mention.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">View Source</a>}
+                </div>
+
+                {/* AI Response Section */}
+                <div className="mt-4">
+                    <h4 className="font-semibold text-sm mb-2 text-gray-600">Suggested Response & Strategy:</h4>
+                    {isLoading && <LoadingSpinner text="Generating suggestions..." />}
+                    {error && <ErrorDisplay message={error} isMinor={true} />}
+                    {response && !isLoading && !error && (
+                        <div className="space-y-3 p-3 bg-green-50 rounded border border-green-200">
+                            {response.suggestion && (
+                                <div>
+                                    <strong className="text-sm text-green-800">Suggested Text:</strong>
+                                    <p className="text-sm text-gray-700 whitespace-pre-wrap bg-white p-2 rounded border border-gray-200 mt-1">{response.suggestion}</p>
+                                </div>
+                            )}
+                            {response.strategy && (
+                                <div>
+                                    <strong className="text-sm text-green-800">Engagement Strategy:</strong>
+                                    <p className="text-sm text-gray-700 whitespace-pre-wrap mt-1">{response.strategy}</p>
+                                </div>
+                            )}
+                            {/* Add other fields from the response if available (e.g., similar past issues) */}
+                        </div>
+                    )}
+                </div>
+
+                <button
+                    onClick={onClose}
+                    className="mt-6 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out"
+                >
+                    Close Assistant
+                </button>
+            </div>
+        </div>
+    );
+}
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+SentimentBadge.jsx
+-------------------
+// app/components/SentimentBadge.jsx
+import React from 'react';
+
+// Define colors based on type and value (customize these extensively)
+const BADGE_STYLES = {
+    sentiment: {
+        negative: 'bg-red-100 text-red-800 border border-red-300',
+        neutral: 'bg-gray-100 text-gray-800 border border-gray-300',
+        positive: 'bg-green-100 text-green-800 border border-green-300',
+        default: 'bg-gray-100 text-gray-800 border border-gray-300',
+    },
+    tone: {
+        angry: 'bg-red-200 text-red-900 border border-red-400',
+        confused: 'bg-yellow-100 text-yellow-800 border border-yellow-300',
+        sarcastic: 'bg-purple-100 text-purple-800 border border-purple-300',
+        default: 'bg-blue-100 text-blue-800 border border-blue-300', // Default for other tones
+    },
+    intent: {
+        complaint: 'bg-orange-100 text-orange-800 border border-orange-300',
+        question: 'bg-teal-100 text-teal-800 border border-teal-300',
+        rant: 'bg-pink-100 text-pink-800 border border-pink-300',
+        meme: 'bg-indigo-100 text-indigo-800 border border-indigo-300',
+        default: 'bg-gray-100 text-gray-800 border border-gray-300',
+    },
+    // Add more types if needed
+};
+
+export default function SentimentBadge({ type = 'sentiment', value }) {
+    if (!value) return null; // Don't render if no value
+
+    const valueLower = String(value).toLowerCase();
+    const styles = BADGE_STYLES[type] || BADGE_STYLES.sentiment; // Fallback type
+    const colorClass = styles[valueLower] || styles.default;
+
+    return (
+        <span
+            className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${colorClass}`}
+        >
+            {`${type}: ${value}`}
+        </span>
+    );
+}
