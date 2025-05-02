@@ -88,12 +88,6 @@ export async function fetchMentions(brandQuery) {
     // return [...mockMentions];
   }
 
-  // Simulate potential API error randomly
-  // if (Math.random() < 0.1) {
-  //   console.error("MOCK API: Simulated fetchMentions error");
-  //   throw new Error(`Failed to fetch mentions for ${brandQuery} (Simulated Error)`);
-  // }
-
   // Simulate filtering based on brandQuery (case-insensitive)
   const queryLower = brandQuery.toLowerCase();
   const results = mockMentions.filter(

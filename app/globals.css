@@ -1,26 +1,68 @@
-@import "tailwindcss";
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Apply base styles using Tailwind's @layer directive */
+@layer base {
+  html {
+    @apply h-full scroll-smooth; /* Ensure html takes full height, enable smooth scrolling */
+    color-scheme: dark; /* Hint to browser for dark mode styling of native elements */
   }
+
+  body {
+    @apply h-full bg-gray-800 text-gray-200 font-sans antialiased;
+    /* Dark background (e.g., gray-800 or black) */
+    /* Light base text color */
+    /* Standard sans-serif font stack */
+    /* Smoother font rendering */
+  }
+
+  /* Optional: Define base styles for common elements in dark mode */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply text-gray-100 font-semibold; /* Slightly brighter/bolder text for headings */
+  }
+
+  p {
+    @apply leading-relaxed; /* Slightly more space between lines for readability */
+  }
+
+  a {
+    /* Example link color - adjust as needed */
+    @apply text-blue-400 hover:text-blue-300;
+  }
+
+  /* Style form elements for dark mode */
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    @apply bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:ring-indigo-500 focus:border-indigo-500;
+    /* Darker background, lighter border, light text/placeholders */
+  }
+
+  button {
+    /* Basic button styling - can be overridden by utility classes */
+    @apply font-medium rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800;
+  }
+
+  /* You might want specific styles for code blocks if your mentions contain code */
+  /* pre, code {
+     @apply bg-gray-900 p-1 rounded text-sm font-mono;
+  }
+  pre {
+     @apply p-4 overflow-x-auto;
+  } */
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+/* You can define custom reusable components here if needed */
+/* @layer components {
+   .chat-bubble { ... }
+} */
