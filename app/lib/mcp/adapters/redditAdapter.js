@@ -56,7 +56,6 @@ function transformRedditPost(post, brandQuery) {
       redditScore: data.score,
       redditNumComments: data.num_comments,
       redditSubreddit: data.subreddit_name_prefixed,
-      // Add other potentially useful fields like 'upvote_ratio', 'link_flair_text' etc.
     },
     fetchedAt: new Date().toISOString(),
     tags: brandQuery ? [brandQuery] : [],
@@ -99,11 +98,7 @@ export async function fetchMentions(brandQuery) {
       `Reddit Adapter Error fetching mentions for "${brandQuery}":`,
       error.message
     );
-    // Don't throw, return empty array or partial results if applicable
-    // Or re-throw if the calling service should handle it
-    // throw error; // Or handle more gracefully
-    return []; // Return empty on error for now
+
+    return [];
   }
 }
-
-// TODO: Add fetchComments function if needed later

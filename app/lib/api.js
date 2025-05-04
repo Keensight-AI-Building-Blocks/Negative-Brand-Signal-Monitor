@@ -64,11 +64,3 @@ export async function fetchAssistance(mentionId, mentionContext) {
     throw new Error(errorMessage);
   }
 }
-
-// --- MOCK DATA (Can be removed or kept for fallback/testing) ---
-// You might want to remove the mock data now or keep it behind a flag for testing UI without API calls.
-/*
-const createSampleMention = ...
-const mockMentions = ...
-const mockAssistanceResponse = ...
-*/

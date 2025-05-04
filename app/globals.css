@@ -3,37 +3,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Apply base styles using Tailwind's @layer directive */
 @layer base {
   html {
-    @apply h-full scroll-smooth; /* Ensure html takes full height, enable smooth scrolling */
-    color-scheme: dark; /* Hint to browser for dark mode styling of native elements */
+    @apply h-full scroll-smooth;
+    color-scheme: dark;
   }
 
   body {
     @apply h-full bg-gray-800 text-gray-200 font-sans antialiased;
-    /* Dark background (e.g., gray-800 or black) */
-    /* Light base text color */
-    /* Standard sans-serif font stack */
-    /* Smoother font rendering */
   }
 
-  /* Optional: Define base styles for common elements in dark mode */
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    @apply text-gray-100 font-semibold; /* Slightly brighter/bolder text for headings */
+    @apply text-gray-100 font-semibold;
   }
 
   p {
-    @apply leading-relaxed; /* Slightly more space between lines for readability */
+    @apply leading-relaxed;
   }
 
   a {
-    /* Example link color - adjust as needed */
     @apply text-blue-400 hover:text-blue-300;
   }
 
@@ -45,24 +38,9 @@
   textarea,
   select {
     @apply bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:ring-indigo-500 focus:border-indigo-500;
-    /* Darker background, lighter border, light text/placeholders */
   }
 
   button {
-    /* Basic button styling - can be overridden by utility classes */
     @apply font-medium rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800;
   }
-
-  /* You might want specific styles for code blocks if your mentions contain code */
-  /* pre, code {
-     @apply bg-gray-900 p-1 rounded text-sm font-mono;
-  }
-  pre {
-     @apply p-4 overflow-x-auto;
-  } */
 }
-
-/* You can define custom reusable components here if needed */
-/* @layer components {
-   .chat-bubble { ... }
-} */
