@@ -1,0 +1,1447 @@
+----------------------------------------------------------------
+Development of Negative Brand Signal Monitor 
+----------------------------------------------------------------
+Technical Solution :
+
+Using Model Context Protocol (MCP) to detect and prioritize negative signals across key online channels 
+[MCP Feeds (Reddit,..)]→ [Signal Processor]→[Sentiment + Sarcasm Engine]→[Priority Queue]→[Response Assistant + Dashboard] 
+ 
+Ingestion Layer (via MCP)  
+● Feeds: Reddit 
+● MCP standardizes content (post body, comments, metadata)  
+● Filter by brand mentions (fuzzy matching, brand aliases)  
+ 
+Signal Processor 
+● Lightweight service (Python/Node)  
+● Tags incoming content:  
+○ Source  
+○ Thread popularity  
+○ Mention velocity  
+ 
+Sentiment + Sarcasm Engine 
+● Fine-tuned transformer (e.g., Distil Roberta or LLaMA2-lite)  
+● Output tags:  
+○ Sentiment: Negative / Neutral / Positive  
+○ Tone: Angry, Confused, Sarcastic  
+○ Intent: Complaint, Question, Rant, Meme  
+ 
+Velocity + Virality Scoring 
+● Risk Score = Sentiment Weight × Tone Intensity × Virality  
+● Detect spikes in mention frequency and engagement rates  
+● Rapid Response Assistant 
+ 
+GPT-powered   
+● Suggest responses  
+● Recommend an engagement strategy  
+● Surface similar past issues  
+ 
+Dashboard UI  
+● Real-Time Alerts with Risk Score  
+● Top Negative Threads  
+● Sentiment Timeline
+ 
+1. Scheduler: 
+2. Backend Logic: Node.js within Vercel Serverless Functions
+3. Frontend & Hosting: React/Next.js on Vercel 
+4. Database: Vercel Postgres or Supabase 
+5. Data Source: Reddit API 
+6. Sentiment/Tone Analysis: Hugging Face Inference API 
+7. Response Assistance: Google Gemini API or similar 
+
+----------------------------------------------------------------
+Flow Map:
+----------------------------------------------------------------
+1. Scheduled Fetching:
+Vercel Cron Job -> Vercel Function (Node.js) -> Reddit API (Get Mentions) -> Free Tier DB (Save Raw Mention)
+
+2. Sentiment Analysis (Triggered or Batched):
+DB Trigger / Vercel Cron Job -> Vercel Function (Node.js) -> Hugging Face API (Analyze Text) -> Free Tier DB (Update Mention with Sentiment/Tone)
+
+3. Risk Scoring (Scheduled):
+Vercel Cron Job -> Vercel Function (Node.js) -> Free Tier DB (Read Analyzed Mentions) -> Calculate Velocity/Virality/Risk Score -> Free Tier DB (Update Mention with Risk Score)
+
+4. Dashboard Display:
+User -> Next.js Frontend (on Vercel) -> Vercel Function (API Route) -> Free Tier DB (Read Scored/Prioritized Mentions) -> Display Data to User
+
+5. AI Response Assistance (User Triggered):
+User (Clicks Assist Button on Dashboard) -> Vercel Function (API Route) -> Free Tier DB (Get Mention Context) -> Free Tier LLM API (e.g., Gemini - Generate Suggestion) -> Return Suggestion to Dashboard
+
+----------------------------------------------------------------
+file structure:
+----------------------------------------------------------------
+
+.env.local
+app/api/assist/route.js
+app/api/mentions/route.js
+app/components/Dashboard.jsx
+app/components/ErrorDisplay.jsx
+app/components/LoadingSpinner.jsx
+app/components/MentionItem.jsx
+app/components/MentionList.jsx
+app/components/ResponseAssistant.jsx
+app/components/SentimentBadge.jsx
+app/favicon.ico
+app/globals.css
+app/layout.js
+app/lib/api.js
+app/lib/mcp/adapters/redditAdapter.js
+app/lib/mcp/mcpService.js
+app/lib/mcp/modelContext.js
+app/page.js
+
+
+"dependencies": 
+{"react": "^19.0.0","react-dom": "^19.0.0","next": "15.3.1"}
+ 
+
+----------------------------------------------------------------
+files
+----------------------------------------------------------------
+
+# .env.local
+
+# Reddit API Credentials (Script App Type)
+REDDIT_CLIENT_ID=zn_pvqKzVYbU_ijOSFA3vA
+REDDIT_CLIENT_SECRET=X4-LjHZAEkZz0E0kg7HtXjY8qQIuzA
+REDDIT_USERNAME=kimimas97
+REDDIT_PASSWORD=kimimas123456789 # Ensure 2FA is OFF for the kimimas97 Reddit account
+REDDIT_USER_AGENT="MCPBrandCollector/0.1 by u/kimimas97" # Or your preferred user agent
+
+# Hugging Face API Token
+HF_API_TOKEN=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 # Your existing token
+
+# Google AI / Gemini API Key
+GEMINI_API_KEY=AIzaSyAFr9VeIcnCdjGdahijFcI3HucuHPJfHww # Your existing key
+
+# Specify the Hugging Face Model you want to use
+HF_SENTIMENT_MODEL_URL=https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english
+HF_TONE_MODEL_URL=https://api-inference.huggingface.co/models/michellejieli/emotion_text_classifier # Example
+
+
+// app/page.js
+import Dashboard from "./components/Dashboard";
+
+export default function HomePage() {
+  return (
+    <div>
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">
+        Brand Signal Monitor
+      </h1>
+      <Dashboard />
+    </div>
+  );
+}
+
+
+// app/layout.js
+import "./globals.css"; // Import the updated global styles
+
+export const metadata = {
+  title: "NBSM - Brand Signal Monitor",
+  description: "Monitor negative brand signals for DTC startups",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body className="min-h-screen">
+        <main className="container mx-auto p-4 md:p-6 lg:p-8">{children}</main>
+      </body>
+    </html>
+  );
+}
+
+
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply h-full scroll-smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply h-full bg-gray-800 text-gray-200 font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply text-gray-100 font-semibold;
+  }
+
+  p {
+    @apply leading-relaxed;
+  }
+
+  a {
+    @apply text-blue-400 hover:text-blue-300;
+  }
+
+  /* Style form elements for dark mode */
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    @apply bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:ring-indigo-500 focus:border-indigo-500;
+  }
+
+  button {
+    @apply font-medium rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800;
+  }
+}
+
+
+// lib/api.js
+import axios from "axios"; // Use axios or native fetch
+
+/**
+ * Fetches prioritized mentions for a specific brand query from the backend API.
+ * @param {string} brandQuery - The brand name to search for.
+ */
+export async function fetchMentions(brandQuery) {
+  console.log(`API Lib: Fetching mentions for query: "${brandQuery}"...`);
+  if (!brandQuery || brandQuery.trim() === "") {
+    console.log("API Lib: No query provided, returning empty array.");
+    return [];
+  }
+
+  try {
+    // Use a relative URL to call the internal Next.js API route
+    const response = await axios.get(
+      `/api/mentions?brandQuery=${encodeURIComponent(brandQuery.trim())}`
+    );
+    console.log(
+      `API Lib: Received ${response.data?.length ?? 0} mentions from backend.`
+    );
+    return response.data || []; // Ensure returning an array
+  } catch (error) {
+    console.error(
+      "API Lib Error fetching mentions:",
+      error.response?.data || error.message
+    );
+    // Throw a more specific error message to the component
+    const errorMessage =
+      error.response?.data?.error ||
+      `Failed to fetch mentions for "${brandQuery}". Check network or server logs.`;
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Requests AI assistance for a specific mention from the backend API.
+ * @param {string} mentionId - The ID of the mention.
+ * @param {object} mentionContext - Relevant details (text, sentiment, tone, source etc.).
+ */
+export async function fetchAssistance(mentionId, mentionContext) {
+  console.log(`API Lib: Fetching assistance for mention ${mentionId}...`);
+  if (!mentionId || !mentionContext) {
+    throw new Error("Mention ID and context are required for assistance.");
+  }
+
+  try {
+    // Use a relative URL to call the internal Next.js API route
+    const response = await axios.post("/api/assist", {
+      mentionId,
+      mentionContext,
+    });
+    console.log("API Lib: Received assistance from backend.");
+    return response.data;
+  } catch (error) {
+    console.error(
+      "API Lib Error fetching assistance:",
+      error.response?.data || error.message
+    );
+    const errorMessage =
+      error.response?.data?.error ||
+      "Failed to get AI assistance. Check network or server logs.";
+    throw new Error(errorMessage);
+  }
+}
+
+
+
+// lib/mcp/modelContext.js (or .ts if using TypeScript)
+
+export const createModelContext = ({
+  id,
+  sourceType, // 'reddit'
+  sourceIdentifier,
+  url,
+  text,
+  title,
+  author,
+  parent,
+  metadata,
+  fetchedAt,
+  tags = [],
+  rawSourceData,
+}) => ({
+  id: id || `${sourceType}_${sourceIdentifier}_${Date.now()}`, // Ensure unique ID
+  sourceType: sourceType || "unknown",
+  sourceIdentifier: sourceIdentifier || "unknown",
+  url: url || "#",
+  text: text || "",
+  title: title || null,
+  author: author || null,
+  parent: parent || null,
+  metadata: {
+    createdAt: metadata?.createdAt || new Date().toISOString(),
+    ...metadata, // Spread other metadata fields
+  },
+  fetchedAt: fetchedAt || new Date().toISOString(),
+  tags: tags || [],
+  rawSourceData: rawSourceData || null,
+});
+
+
+
+// lib/mcp/mcpService.js
+import * as redditAdapter from "./adapters/redditAdapter";
+
+const adapters = {
+  reddit: redditAdapter,
+};
+
+export async function fetchMentionsFromSources(brandQuery, sources) {
+  const sourcesToQuery = sources || Object.keys(adapters); // Default to all adapters if none specified
+  console.log(
+    `MCP Service: Fetching mentions for "${brandQuery}" from sources: ${sourcesToQuery.join(
+      ", "
+    )}`
+  );
+
+  const fetchPromises = sourcesToQuery
+    .filter(
+      (source) =>
+        adapters[source] && typeof adapters[source].fetchMentions === "function"
+    ) // Check if adapter and function exist
+    .map((source) => {
+      console.log(`MCP Service: Calling ${source} adapter...`);
+      return adapters[source].fetchMentions(brandQuery).catch((error) => {
+        // Catch errors from individual adapters so one failing doesn't stop others
+        console.error(
+          `MCP Service: Error fetching from ${source} adapter:`,
+          error.message
+        );
+        return []; // Return empty array for this source on error
+      });
+    });
+
+  try {
+    const resultsBySource = await Promise.all(fetchPromises);
+    const allMentions = resultsBySource.flat(); // Combine results from all sources
+
+    console.log(`MCP Service: Aggregated ${allMentions.length} mentions.`);
+
+    allMentions.sort(
+      (a, b) => new Date(b.metadata.createdAt) - new Date(a.metadata.createdAt)
+    );
+
+    return allMentions;
+  } catch (error) {
+    console.error(
+      `MCP Service: Critical error during mention aggregation:`,
+      error
+    );
+    return []; // Return empty array on critical failure
+  }
+}
+
+
+
+// lib/mcp/adapters/redditAdapter.js
+import axios from "axios";
+import { createModelContext } from "../modelContext"; // Import the standard structure
+
+// --- Reddit API Authentication (Copied from previous api route) ---
+async function getRedditAccessToken() {
+  const credentials = Buffer.from(
+    `${process.env.REDDIT_CLIENT_ID}:${process.env.REDDIT_CLIENT_SECRET}`
+  ).toString("base64");
+  try {
+    const response = await axios.post(
+      "https://www.reddit.com/api/v1/access_token",
+      `grant_type=password&username=${encodeURIComponent(
+        process.env.REDDIT_USERNAME
+      )}&password=${encodeURIComponent(process.env.REDDIT_PASSWORD)}`,
+      {
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          "User-Agent": process.env.REDDIT_USER_AGENT,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+    return response.data.access_token;
+  } catch (error) {
+    console.error(
+      "Reddit Adapter Error: Failed to get Access Token:",
+      error.response?.data || error.message
+    );
+    throw new Error("Reddit Adapter: Failed to authenticate.");
+  }
+}
+
+// --- Transform Reddit Post Data to ModelContext ---
+function transformRedditPost(post, brandQuery) {
+  const data = post.data;
+  if (!data) return null;
+
+  const mentionText = data.selftext || data.title || ""; // Use body or title
+
+  return createModelContext({
+    id: `reddit_${data.id}`,
+    sourceType: "reddit",
+    sourceIdentifier: data.id,
+    url: `https://www.reddit.com${data.permalink}`,
+    text: mentionText,
+    title: data.title,
+    author: {
+      id: data.author_fullname, // Might not always be available
+      name: data.author,
+      url: `https://www.reddit.com/user/${data.author}`,
+    },
+    // parent: null, // Could add subreddit info here if needed
+    metadata: {
+      createdAt: new Date(data.created_utc * 1000).toISOString(),
+      redditScore: data.score,
+      redditNumComments: data.num_comments,
+      redditSubreddit: data.subreddit_name_prefixed,
+    },
+    fetchedAt: new Date().toISOString(),
+    tags: brandQuery ? [brandQuery] : [],
+    rawSourceData: data, // Optional: include raw data
+  });
+}
+
+// --- Fetch Mentions from Reddit ---
+export async function fetchMentions(brandQuery) {
+  console.log(`Reddit Adapter: Fetching mentions for "${brandQuery}"`);
+  if (!brandQuery) return [];
+
+  try {
+    const accessToken = await getRedditAccessToken();
+    const searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(
+      brandQuery
+    )}&type=link&sort=new&limit=25`; // Search posts
+
+    const redditResponse = await axios.get(searchUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "User-Agent": process.env.REDDIT_USER_AGENT,
+      },
+    });
+
+    const posts = redditResponse.data?.data?.children ?? [];
+    console.log(`Reddit Adapter: Found ${posts.length} potential posts.`);
+
+    // Transform raw posts into ModelContext objects
+    const modelContexts = posts
+      .map((post) => transformRedditPost(post, brandQuery))
+      .filter((mc) => mc !== null && mc.text); // Ensure transformation succeeded and has text
+
+    console.log(
+      `Reddit Adapter: Transformed ${modelContexts.length} posts to ModelContext.`
+    );
+    return modelContexts;
+  } catch (error) {
+    console.error(
+      `Reddit Adapter Error fetching mentions for "${brandQuery}":`,
+      error.message
+    );
+
+    return [];
+  }
+}
+
+
+
+
+---------------------------------------------------------------------------------------------------
+// app/components/SentimentBadge.jsx
+import React from 'react';
+
+// Define colors based on type and value (customize these extensively)
+// Using darker backgrounds and lighter text for better contrast in dark mode UI
+const BADGE_STYLES = {
+    sentiment: {
+        negative: 'bg-red-900 text-red-200 border border-red-700',
+        neutral: 'bg-gray-700 text-gray-300 border border-gray-600',
+        positive: 'bg-green-900 text-green-200 border border-green-700',
+        'analysis pending': 'bg-yellow-900 text-yellow-200 border border-yellow-700 animate-pulse', // Added pending state
+        default: 'bg-gray-700 text-gray-300 border border-gray-600',
+    },
+    tone: {
+        // --- ADJUST THESE LABELS based on your actual Hugging Face Tone/Emotion model ---
+        angry: 'bg-red-800 text-red-100 border border-red-600',
+        anger: 'bg-red-800 text-red-100 border border-red-600', // Common label
+        confused: 'bg-yellow-800 text-yellow-100 border border-yellow-600', // Keep if you map to this
+        sad: 'bg-blue-800 text-blue-100 border border-blue-600',
+        sadness: 'bg-blue-800 text-blue-100 border border-blue-600', // Common label
+        fear: 'bg-purple-800 text-purple-100 border border-purple-600',
+        sarcastic: 'bg-teal-800 text-teal-100 border border-teal-600', // Keep if you map or have model for it
+        joy: 'bg-green-800 text-green-100 border border-green-600',
+        love: 'bg-pink-800 text-pink-100 border border-pink-600',
+        surprise: 'bg-indigo-800 text-indigo-100 border border-indigo-600',
+        // --- End Model Specific Labels ---
+        'analysis pending': 'bg-yellow-900 text-yellow-200 border border-yellow-700 animate-pulse', // Added pending state
+        unknown: 'bg-gray-700 text-gray-300 border border-gray-600', // If API returns 'Unknown'
+        default: 'bg-gray-600 text-gray-200 border border-gray-500', // Fallback for unmapped tones
+    },
+    intent: { // These are still placeholders based on original spec
+        complaint: 'bg-orange-800 text-orange-100 border border-orange-600',
+        question: 'bg-cyan-800 text-cyan-100 border border-cyan-600',
+        rant: 'bg-rose-800 text-rose-100 border border-rose-600',
+        meme: 'bg-violet-800 text-violet-100 border border-violet-600',
+        comment: 'bg-gray-700 text-gray-300 border border-gray-600', // Default from API
+        default: 'bg-gray-700 text-gray-300 border border-gray-600',
+    },
+};
+
+export default function SentimentBadge({ type = 'sentiment', value }) {
+    // Handle null, undefined, or empty string values gracefully
+    if (value === null || value === undefined || value === '') return null;
+
+    const valueLower = String(value).toLowerCase();
+    const stylesForType = BADGE_STYLES[type] || BADGE_STYLES.sentiment; // Fallback to sentiment styles
+    const colorClass = stylesForType[valueLower] || stylesForType.default; // Fallback to default style within type
+
+    // Capitalize the first letter of the value for display, keep type lowercase
+    const displayValue = valueLower.charAt(0).toUpperCase() + valueLower.slice(1);
+
+    return (
+        <span
+            className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${colorClass}`}
+        >
+            {/* You can choose to show the type or not */}
+            {/* Option 1: Show Type: Value */}
+            {/* {`${type}: ${displayValue}`} */}
+            {/* Option 2: Just show Value (often clearer with distinct colors) */}
+            {displayValue}
+        </span>
+    );
+}
+
+
+
+// app/components/ResponseAssistant.jsx
+import React from 'react';
+import LoadingSpinner from './LoadingSpinner'; // Ensure this component exists and works
+import ErrorDisplay from './ErrorDisplay';   // Ensure this component exists and works
+
+export default function ResponseAssistant({ mention, response, isLoading, error, onClose }) {
+    // Early return if no mention is selected (prevents errors accessing mention properties)
+    if (!mention) {
+        return null;
+    }
+
+    // Defensive check for response structure (optional but good practice)
+    const suggestion = response?.suggestion ?? null;
+    const strategy = response?.strategy ?? null;
+
+    return (
+        // Modal Backdrop
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-out">
+
+            {/* Modal Panel */}
+            <div className="bg-gray-800 text-gray-200 rounded-lg shadow-xl p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto border border-gray-700 transform transition-all duration-300 ease-out scale-95 opacity-0 animate-fade-scale-in">
+                {/* Close Button */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-3 right-3 text-gray-400 hover:text-white text-3xl leading-none font-semibold p-1 outline-none focus:outline-none"
+                    aria-label="Close assistant"
+                    title="Close" // Added title for accessibility
+                >
+                    &times; {/* Close icon */}
+                </button>
+
+                {/* Modal Header */}
+                <h3 className="text-xl font-semibold mb-4 text-gray-100 border-b border-gray-700 pb-2">
+                    AI Response Assistant
+                </h3>
+
+                {/* Original Mention Context Box */}
+                <div className="mb-4 p-3 bg-gray-700 rounded border border-gray-600">
+                    <h4 className="font-semibold text-sm mb-1 text-gray-400">Original Mention:</h4>
+                    {/* Use optional chaining and fallbacks for safety */}
+                    <p className="text-sm text-gray-300 mb-1 italic break-words">
+                        "{mention?.text ?? 'No text available'}"
+                    </p>
+                    <p className="text-xs text-gray-500">
+                        Source: {mention?.source ?? 'N/A'} | Sentiment: {mention?.sentiment ?? 'N/A'} | Tone: {mention?.tone ?? 'N/A'}
+                    </p>
+                    {mention?.url && (
+                        <a
+                            href={mention.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-indigo-400 hover:underline hover:text-indigo-300 transition-colors"
+                        >
+                            View Source
+                        </a>
+                    )}
+                </div>
+
+                {/* AI Response Section */}
+                <div className="mt-4">
+                    <h4 className="font-semibold text-sm mb-2 text-gray-400">Suggested Response & Strategy:</h4>
+
+                    {/* Loading State */}
+                    {isLoading && <LoadingSpinner text="Generating suggestions..." />}
+
+                    {/* Error State */}
+                    {/* Pass isMinor=true for less intrusive styling */}
+                    {error && !isLoading && <ErrorDisplay message={error} isMinor={true} />}
+
+                    {/* Success State */}
+                    {/* Only render response section if not loading and no error */}
+                    {!isLoading && !error && response && (
+                        <div className="space-y-4 p-3 bg-gray-700 rounded border border-gray-600">
+                            {/* Display Suggestion */}
+                            {suggestion ? ( // Check if suggestion exists
+                                <div>
+                                    <strong className="text-sm text-gray-300 block mb-1">Suggested Text:</strong>
+                                    <pre className="text-sm text-gray-100 whitespace-pre-wrap font-sans bg-gray-600 p-3 rounded border border-gray-500">{suggestion}</pre>
+                                    {/* Using <pre> preserves whitespace/newlines from the AI */}
+                                </div>
+                            ) : (
+                                // Show a message if suggestion is missing but response exists
+                                <p className="text-sm text-gray-400 italic">No response suggestion was generated.</p>
+                            )}
+
+                            {/* Display Strategy */}
+                            {strategy ? ( // Check if strategy exists
+                                <div>
+                                    <strong className="text-sm text-gray-300 block mb-1">Engagement Strategy:</strong>
+                                    <p className="text-sm text-gray-200 whitespace-pre-wrap mt-1">{strategy}</p>
+                                </div>
+                            ) : (
+                                // Show a message if strategy is missing but response exists
+                                <p className="text-sm text-gray-400 italic">No engagement strategy was provided.</p>
+                            )}
+                        </div>
+                    )}
+                    {/* Message if response is null/undefined and not loading/erroring */}
+                    {!isLoading && !error && !response && (
+                        <p className="text-sm text-gray-400 italic p-3 bg-gray-700 rounded border border-gray-600">Click "Suggest Response" on a mention to get started.</p>
+                    )}
+                </div>
+
+                {/* Close Button (Footer) */}
+                <button
+                    onClick={onClose}
+                    className="mt-6 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500"
+                >
+                    Close Assistant
+                </button>
+            </div>
+            {/* Simple animation helper - add this CSS to your globals.css or similar */}
+            <style jsx global>{`
+                @keyframes fade-scale-in {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+                .animate-fade-scale-in {
+                    animation: fade-scale-in 0.2s ease-out forwards;
+                }
+            `}</style>
+        </div>
+    );
+}
+
+
+
+// app/components/MentionItem.jsx
+import React from 'react';
+import SentimentBadge from './SentimentBadge';
+import { formatDistanceToNow } from 'date-fns'; // Import date-fns function
+
+// Helper to format dates using date-fns
+const formatDate = (isoString) => {
+    if (!isoString) return 'N/A';
+    try {
+        // Example: "about 5 hours ago", "less than a minute ago"
+        return formatDistanceToNow(new Date(isoString), { addSuffix: true });
+    } catch (e) {
+        console.error("Date formatting error:", e);
+        return 'Invalid Date';
+    }
+};
+
+
+export default function MentionItem({ mention, onAssistClick }) {
+    // Destructure expected properties from the mention object (reflecting api/mentions route)
+    const {
+        id,
+        text,
+        source, // e.g., 'Reddit'
+        url,
+        sentiment, // e.g., 'Negative', 'Positive', 'Neutral', 'Analysis Pending'
+        tone,      // e.g., 'anger', 'joy', 'confused', 'sarcastic', 'Analysis Pending', 'Unknown' (depends on HF model)
+        intent,    // Currently placeholder ('Comment') from API
+        riskScore, // Calculated score (0-100)
+        timestamp, // ISO string date
+        threadPopularity, // e.g., Reddit score
+        velocity, // e.g., comments/hour
+        author,   // Added from Reddit API
+        subreddit, // Added from Reddit API (e.g., 'r/YourBrand')
+        numComments // Added from Reddit API
+    } = mention;
+
+    // Basic risk score styling (adjust thresholds and colors if needed)
+    const getRiskColor = (score) => {
+        score = score ?? 50; // Default to neutral if undefined
+        if (score >= 75) return 'text-red-600 font-bold';
+        if (score >= 50) return 'text-yellow-600 font-semibold';
+        if (score >= 25) return 'text-blue-600';
+        return 'text-gray-500';
+    };
+
+    return (
+        // Using dark mode compatible base: bg-gray-800, text-gray-100/300
+        <div className="bg-gray-800 p-4 rounded-lg shadow-md border border-gray-700 hover:shadow-lg hover:border-gray-600 transition-shadow duration-200">
+            <div className="flex justify-between items-start mb-2 flex-wrap"> {/* Added flex-wrap */}
+                {/* Left side: Source, Author, Subreddit */}
+                <div className='mb-1 sm:mb-0'>
+                    <span className="font-semibold text-lg mr-2 capitalize text-gray-100">{source || 'Unknown Source'}</span>
+                    {author && <span className="text-sm text-gray-400 mr-2">by u/{author}</span>}
+                    {subreddit && <span className="text-sm text-indigo-400">{subreddit}</span>}
+                </div>
+                {/* Right side: Risk Score, Timestamp */}
+                <div className='text-right flex-shrink-0'>
+                    <span className={`block text-sm ${getRiskColor(riskScore)} mb-1`}>
+                        Risk: {riskScore?.toFixed(0) ?? 'N/A'}
+                    </span>
+                    <span className="block text-xs text-gray-500">{formatDate(timestamp)}</span>
+                </div>
+            </div>
+
+            {/* Mention Text */}
+            <p className="text-gray-300 mb-3 leading-relaxed break-words">{text || 'No content available.'}</p> {/* Allow long words to break */}
+
+            {/* Tags: Sentiment, Tone, Intent, Velocity, Popularity, Comments */}
+            <div className="flex flex-wrap gap-2 items-center mb-3 text-sm">
+                <SentimentBadge type="sentiment" value={sentiment} />
+                <SentimentBadge type="tone" value={tone} />
+                {intent && intent !== "Comment" && <SentimentBadge type="intent" value={intent} />} {/* Only show intent if not default */}
+
+                {/* Other metadata badges - using dark-friendly bg-gray-700 */}
+                {velocity !== undefined && (
+                    <span className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded whitespace-nowrap">
+                        Velocity: {velocity.toFixed(1)}/hr
+                    </span>
+                )}
+                {threadPopularity !== undefined && (
+                    <span className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded whitespace-nowrap">
+                        Popularity: {threadPopularity}
+                    </span>
+                )}
+                {numComments !== undefined && (
+                    <span className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded whitespace-nowrap">
+                        Comments: {numComments}
+                    </span>
+                )}
+            </div>
+
+
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-700">
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 hover:text-indigo-300 hover:underline text-sm transition-colors duration-150"
+                    onClick={(e) => e.stopPropagation()} // Prevent card click if link is clicked
+                    aria-label={`View source on ${source || 'platform'}`}
+                >
+                    View Source
+                </a>
+                <button
+                    onClick={() => onAssistClick(mention)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1.5 px-3 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500"
+                    aria-label={`Get AI assistance for mention by ${author || 'user'}`}
+                >
+                    Suggest Response
+                </button>
+            </div>
+        </div>
+    );
+}
+
+
+// app/components/MentionItem.jsx
+import React from 'react';
+import SentimentBadge from './SentimentBadge';
+import { formatDistanceToNow } from 'date-fns';
+
+// Helper to format dates using date-fns
+const formatDate = (isoString) => {
+    if (!isoString) return 'N/A';
+    try {
+        return formatDistanceToNow(new Date(isoString), { addSuffix: true });
+    } catch (e) {
+        console.error("Date formatting error:", e);
+        return 'Invalid Date';
+    }
+};
+
+export default function MentionItem({ mention, onAssistClick }) {
+    // Destructure directly from the augmented ModelContext object received from the API
+    const {
+        id,
+        sourceType, // Use sourceType instead of source
+        url,
+        text,
+        title,
+        author, // Object: { name, url }
+        metadata, // Object: { createdAt, redditScore, redditNumComments, redditSubreddit, ... }
+        tags,
+        // Analysis results added by API route:
+        sentiment,
+        tone,
+        intent, // Still likely a placeholder
+        riskScore,
+    } = mention;
+
+    // Access specific metadata fields safely
+    const createdAt = metadata?.createdAt;
+    const popularity = metadata?.redditScore ?? metadata?.quoraViews ?? 0; // Example handling multiple sources
+    const numComments = metadata?.redditNumComments; // Example
+    const subreddit = metadata?.redditSubreddit; // Example
+
+    // Basic risk score styling
+    const getRiskColor = (score) => {
+        score = score ?? 50;
+        if (score >= 75) return 'text-red-400 font-bold'; // Adjusted for dark mode
+        if (score >= 50) return 'text-yellow-400 font-semibold'; // Adjusted for dark mode
+        if (score >= 25) return 'text-blue-400'; // Adjusted for dark mode
+        return 'text-gray-400';
+    };
+
+
+    return (
+        <div className="bg-gray-800 p-4 rounded-lg shadow-md border border-gray-700 hover:shadow-lg hover:border-gray-600 transition-shadow duration-200">
+            {/* Header Section */}
+            <div className="flex justify-between items-start mb-2 flex-wrap">
+                <div className='mb-1 sm:mb-0'>
+                    {/* Display Source Type and Title or Author/Subreddit */}
+                    <span className="font-semibold text-lg mr-2 capitalize text-gray-100">{sourceType || 'Unknown'}</span>
+                    {title && <span className="text-md text-gray-300 mr-2">"{title}"</span>}
+                    {!title && author?.name && <span className="text-sm text-gray-400 mr-2">by u/{author.name}</span>}
+                    {!title && subreddit && <span className="text-sm text-indigo-400">{subreddit}</span>}
+                </div>
+                <div className='text-right flex-shrink-0'>
+                    <span className={`block text-sm ${getRiskColor(riskScore)} mb-1`}>
+                        Risk: {riskScore?.toFixed(0) ?? 'N/A'}
+                    </span>
+                    <span className="block text-xs text-gray-500">{formatDate(createdAt)}</span>
+                </div>
+            </div>
+
+            {/* Mention Text */}
+            <p className="text-gray-300 mb-3 leading-relaxed break-words">{text || 'No content available.'}</p>
+
+            {/* Tags: Sentiment, Tone, Intent, etc. */}
+            <div className="flex flex-wrap gap-2 items-center mb-3 text-sm">
+                <SentimentBadge type="sentiment" value={sentiment} />
+                <SentimentBadge type="tone" value={tone} />
+                {/* Only show intent if it's not the default/placeholder */}
+                {intent && !['Comment', 'Unknown', null, undefined].includes(intent) && <SentimentBadge type="intent" value={intent} />}
+
+                {/* Display selected metadata */}
+                {popularity !== undefined && (
+                    <span className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded whitespace-nowrap">
+                        Pop: {popularity}
+                    </span>
+                )}
+                {numComments !== undefined && (
+                    <span className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded whitespace-nowrap">
+                        Comments: {numComments}
+                    </span>
+                )}
+                {/* Display tags if any */}
+                {tags?.map(tag => <span key={tag} className="text-xs bg-blue-900 text-blue-200 px-2 py-0.5 rounded">{tag}</span>)}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-700">
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 hover:text-indigo-300 hover:underline text-sm transition-colors duration-150"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`View source on ${sourceType || 'platform'}`}
+                >
+                    View Source
+                </a>
+                <button
+                    onClick={() => onAssistClick(mention)} // Pass the full mention object
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-1.5 px-3 rounded-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500"
+                    aria-label={`Get AI assistance for mention`}
+                >
+                    Suggest Response
+                </button>
+            </div>
+        </div>
+    );
+}
+
+
+
+// app/components/LoadingSpinner.jsx
+import React from 'react';
+
+export default function LoadingSpinner({ text = 'Loading...' }) {
+    return (
+        <div className="flex items-center justify-center p-4 space-x-2">
+            <div className="w-6 h-6 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+            <span className="text-gray-600">{text}</span>
+        </div>
+    );
+}
+
+
+
+
+// app/components/ErrorDisplay.jsx
+import React from 'react';
+
+export default function ErrorDisplay({ message, onRetry, isMinor = false }) {
+    const baseClasses = "p-4 rounded-md border";
+    const colorClasses = isMinor
+        ? "bg-yellow-50 border-yellow-300 text-yellow-800"
+        : "bg-red-50 border-red-300 text-red-800";
+
+    return (
+        <div className={`${baseClasses} ${colorClasses}`} role="alert">
+            <p>
+                <span className="font-medium">{isMinor ? 'Warning:' : 'Error:'}</span> {message || 'An unexpected error occurred.'}
+            </p>
+            {onRetry && !isMinor && (
+                <button
+                    onClick={onRetry}
+                    className="mt-2 text-sm font-medium text-red-700 hover:underline"
+                >
+                    Try again
+                </button>
+            )}
+        </div>
+    );
+}
+
+
+
+
+
+// app/components/ErrorDisplay.jsx
+import React from 'react';
+
+export default function ErrorDisplay({ message, onRetry, isMinor = false }) {
+    const baseClasses = "p-4 rounded-md border";
+    const colorClasses = isMinor
+        ? "bg-yellow-50 border-yellow-300 text-yellow-800"
+        : "bg-red-50 border-red-300 text-red-800";
+
+    return (
+        <div className={`${baseClasses} ${colorClasses}`} role="alert">
+            <p>
+                <span className="font-medium">{isMinor ? 'Warning:' : 'Error:'}</span> {message || 'An unexpected error occurred.'}
+            </p>
+            {onRetry && !isMinor && (
+                <button
+                    onClick={onRetry}
+                    className="mt-2 text-sm font-medium text-red-700 hover:underline"
+                >
+                    Try again
+                </button>
+            )}
+        </div>
+    );
+}
+
+
+
+
+
+// app/components/Dashboard.jsx
+'use client';
+
+import React, { useState, useCallback } from 'react';
+import MentionList from './MentionList';
+import ResponseAssistant from './ResponseAssistant';
+import LoadingSpinner from './LoadingSpinner';
+import ErrorDisplay from './ErrorDisplay';
+import { fetchMentions, fetchAssistance } from '../lib/api';
+
+export default function Dashboard() {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeSearchTerm, setActiveSearchTerm] = useState('');
+    const [mentions, setMentions] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [error, setError] = useState(null);
+    const [selectedMention, setSelectedMention] = useState(null);
+    const [isAssistantLoading, setIsAssistantLoading] = useState(false);
+    const [assistantResponse, setAssistantResponse] = useState(null);
+    const [assistantError, setAssistantError] = useState(null);
+    const [searchPerformed, setSearchPerformed] = useState(false);
+
+    const performSearch = useCallback(async (brandQuery) => {
+        if (!brandQuery) return;
+        console.log(`Searching for brand: ${brandQuery}`);
+        setIsSearching(true);
+        setError(null);
+        setMentions([]);
+        setSearchPerformed(true);
+        try {
+            const fetchedMentions = await fetchMentions(brandQuery);
+            const sortedMentions = fetchedMentions.sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0));
+            setMentions(sortedMentions);
+        } catch (err) {
+            setError(err.message || `Failed to load mentions for "${brandQuery}".`);
+            setMentions([]);
+        } finally {
+            setIsSearching(false);
+        }
+    }, []);
+
+    const handleInputChange = (event) => {
+        setSearchQuery(event.target.value);
+    };
+
+    const handleSearchSubmit = (event) => {
+        event.preventDefault();
+        const trimmedQuery = searchQuery.trim();
+        if (trimmedQuery) {
+            setActiveSearchTerm(trimmedQuery);
+            performSearch(trimmedQuery);
+        } else {
+            setActiveSearchTerm('');
+            setMentions([]);
+            setError(null);
+            setSearchPerformed(false);
+        }
+    };
+
+    // --- Handlers for AI Assistant (remain the same) ---
+    const handleAssistClick = useCallback(async (mention) => {
+        if (!mention || isAssistantLoading) return;
+        setSelectedMention(mention);
+        setAssistantResponse(null);
+        setAssistantError(null);
+        setIsAssistantLoading(true);
+        try {
+            const context = { /* ... context data ... */ };
+            const response = await fetchAssistance(mention.id, context);
+            setAssistantResponse(response);
+        } catch (err) {
+            setAssistantError(err.message || 'Failed to get assistance.');
+            setAssistantResponse(null);
+        } finally {
+            setIsAssistantLoading(false);
+        }
+    }, [isAssistantLoading]);
+
+    const handleCloseAssistant = () => {
+        setSelectedMention(null);
+        setAssistantResponse(null);
+        setAssistantError(null);
+    };
+
+    // --- Render Logic ---
+    // Use flex column to position search bar below results area
+    return (
+        <div className="flex flex-col h-[calc(100vh-10rem)]"> {/* Adjust height calculation based on header/padding */}
+
+            {/* Main Content / Results Area (Mimics 'Dashboard' box) */}
+            <div className="flex-grow overflow-y-auto p-4 mb-4 border border-gray-600 rounded-lg min-h-[200px]"> {/* Added border, padding, min-height */}
+                {isSearching && <LoadingSpinner text={`Searching for "${activeSearchTerm}"...`} />}
+
+                {error && <ErrorDisplay message={error} onRetry={() => performSearch(activeSearchTerm)} />}
+
+                {!isSearching && !error && searchPerformed && mentions.length === 0 && (
+                    <p className="text-center text-gray-400 py-4 italic">
+                        No mentions found for "{activeSearchTerm}".
+                    </p>
+                )}
+
+                {!isSearching && !error && !searchPerformed && mentions.length === 0 && (
+                    <p className="text-center text-gray-400 py-4 italic">
+                        Enter a brand name below and click Search.
+                    </p>
+                )}
+
+                {/* Mention List */}
+                {!isSearching && mentions.length > 0 && (
+                    <div className={selectedMention ? 'opacity-50 pointer-events-none' : ''}>
+                        <h2 className="text-xl font-semibold mb-4 text-gray-100">
+                            Results for "{activeSearchTerm}"
+                        </h2>
+                        {/* Ensure MentionList/MentionItem styles are updated for dark mode */}
+                        <MentionList mentions={mentions} onAssistClick={handleAssistClick} />
+                    </div>
+                )}
+            </div>
+
+            {/* Search Bar Area (Mimics bottom search bar) */}
+            <div className="mt-auto p-2"> {/* Pushes search bar to the bottom */}
+                <form onSubmit={handleSearchSubmit} className="relative flex items-center w-full max-w-4xl mx-auto"> {/* Centered, max width */}
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={handleInputChange}
+                        placeholder="Enter brand name (e.g., YourBrand)"
+                        // Styling closer to the image: dark bg, rounded, larger text/padding
+                        className="w-full px-5 py-3 pr-16 text-base bg-gray-700 border border-gray-600 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-100 placeholder-gray-400"
+                        aria-label="Search Brand Mentions"
+                        disabled={isSearching || !!selectedMention}
+                    />
+                    <button
+                        type="submit"
+                        // Position button inside input area if desired, or keep adjacent
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!searchQuery.trim() || isSearching || !!selectedMention}
+                    >
+                        {isSearching ? '...' : 'Search'} {/* Or use an icon */}
+                    </button>
+                </form>
+            </div>
+
+
+            {/* AI Response Assistant Modal (Render logic is the same, ensure its internal styles are dark-themed) */}
+            {selectedMention && (
+                <ResponseAssistant
+                    mention={selectedMention}
+                    response={assistantResponse}
+                    isLoading={isAssistantLoading}
+                    error={assistantError}
+                    onClose={handleCloseAssistant}
+                />
+            )}
+        </div>
+    );
+}
+
+
+
+
+
+// app/api/mentions/route.js
+import { NextResponse } from "next/server";
+import axios from "axios";
+import { fetchMentionsFromSources } from "@/lib/mcp/mcpService"; // Use alias or correct path
+
+// --- Hugging Face Helper (Can be moved to a separate lib/analysis.js) ---
+async function analyzeTextWithHuggingFace(text, modelUrl) {
+  if (!text || !modelUrl || !process.env.HF_API_TOKEN) return null;
+  try {
+    const response = await axios.post(
+      modelUrl,
+      { inputs: text, options: { wait_for_model: true } }, // wait_for_model can help with 503s
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 15000, // Increased timeout
+      }
+    );
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 503) {
+      console.warn(
+        `HF model ${modelUrl} is loading/unavailable (503). Skipping analysis.`
+      );
+      return { isLoading: true };
+    }
+    console.error(
+      `Error calling HF API (${modelUrl}) Text: "${text.substring(0, 50)}...":`,
+      error.response?.data || error.message
+    );
+    return null;
+  }
+}
+
+// --- Parsing & Scoring Logic (Can be moved to separate lib/analysis.js) ---
+
+function parseSentiment(hfResult) {
+  let sentiment = "Neutral";
+  let score = 0.5; // Default score
+  if (hfResult && !hfResult.isLoading && Array.isArray(hfResult[0])) {
+    try {
+      const topResult = hfResult[0].reduce((max, current) =>
+        current.score > max.score ? current : max
+      );
+      sentiment =
+        topResult.label === "POSITIVE"
+          ? "Positive"
+          : topResult.label === "NEGATIVE"
+          ? "Negative"
+          : "Neutral";
+      // Adjust score: closer to 1 for positive, closer to 0 for negative
+      score =
+        topResult.label === "POSITIVE"
+          ? topResult.score
+          : topResult.label === "NEGATIVE"
+          ? 1 - topResult.score
+          : 0.5;
+    } catch (e) {
+      console.warn("Error parsing sentiment:", e);
+    }
+  } else if (hfResult?.isLoading) {
+    sentiment = "Analysis Pending";
+    score = -1; // Indicate pending
+  } else {
+    console.warn(`Unexpected sentiment result format:`, hfResult);
+  }
+  return { sentiment, score };
+}
+
+function parseTone(hfResult) {
+  let tone = "Unknown";
+  if (hfResult && !hfResult.isLoading && Array.isArray(hfResult[0])) {
+    try {
+      // *ADJUST BASED ON YOUR EMOTION MODEL OUTPUT*
+      const topResult = hfResult[0].reduce((max, current) =>
+        current.score > max.score ? current : max
+      );
+      tone = topResult.label; // e.g., 'anger', 'joy', 'sadness'
+    } catch (e) {
+      console.warn("Error parsing tone:", e);
+    }
+  } else if (hfResult?.isLoading) {
+    tone = "Analysis Pending";
+  } else {
+    console.warn(`Unexpected tone result format:`, hfResult);
+  }
+  return tone;
+}
+
+function calculateRiskScore(mentionContext, sentimentInfo, tone) {
+  // Basic Risk Score (using standardized ModelContext)
+  let riskScore = 50; // Default neutral
+  if (sentimentInfo.sentiment === "Negative") riskScore += 30;
+  if (["Angry", "anger", "fear", "sadness"].includes(tone?.toLowerCase()))
+    riskScore += 15;
+  if (sentimentInfo.sentiment === "Positive") riskScore -= 20;
+
+  // Use platform-specific metadata if available
+  const popularity =
+    mentionContext.metadata?.redditScore ??
+    mentionContext.metadata?.quoraViews ??
+    0;
+  riskScore += Math.min(popularity / 10, 15); // Add points for popularity (capped)
+
+  const ageHours =
+    (Date.now() - new Date(mentionContext.metadata.createdAt).getTime()) /
+    (1000 * 60 * 60);
+  if (ageHours < 24) riskScore += 5; // Small boost for recent mentions
+
+  riskScore = Math.max(0, Math.min(100, Math.round(riskScore))); // Clamp 0-100
+  return riskScore;
+}
+
+// --- Main GET Handler ---
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const brandQuery = searchParams.get("brandQuery");
+  const sourcesParam = searchParams.get("sources"); // e.g., ?sources=reddit,quora
+  const requestedSources = sourcesParam ? sourcesParam.split(",") : undefined; // Undefined means use default (all)
+
+  if (!brandQuery) {
+    return NextResponse.json(
+      { error: "Brand query is required" },
+      { status: 400 }
+    );
+  }
+
+  console.log(`API Route: Received mention search for: ${brandQuery}`);
+
+  try {
+    // 1. Fetch Standardized Mentions via MCP Service
+    const mentions = await fetchMentionsFromSources(
+      brandQuery,
+      requestedSources
+    );
+
+    if (!mentions || mentions.length === 0) {
+      console.log("API Route: No mentions found by MCP Service.");
+      return NextResponse.json([]); // Return empty array if no mentions
+    }
+    console.log(`API Route: Received ${mentions.length} mentions from MCP.`);
+
+    // 2. Analyze Mentions (Sentiment, Tone) - Batching might be more efficient for HF API if possible
+    const analysisPromises = mentions.map(async (mention) => {
+      const [sentimentResult, toneResult] = await Promise.all([
+        analyzeTextWithHuggingFace(
+          mention.text,
+          process.env.HF_SENTIMENT_MODEL_URL
+        ),
+        analyzeTextWithHuggingFace(mention.text, process.env.HF_TONE_MODEL_URL),
+      ]);
+
+      const sentimentInfo = parseSentiment(sentimentResult);
+      const tone = parseTone(toneResult);
+
+      // 3. Calculate Risk Score
+      const riskScore = calculateRiskScore(mention, sentimentInfo, tone);
+
+      // 4. Augment the ModelContext object with analysis results
+      return {
+        ...mention, // Spread the original standardized mention data
+        sentiment: sentimentInfo.sentiment,
+        tone: tone,
+        intent: "Comment", // Placeholder - intent analysis is separate
+        riskScore: riskScore,
+        // Add any other fields the frontend specifically needs at the top level
+        // (though accessing via 'metadata' in frontend is better practice)
+        threadPopularity: mention.metadata?.redditScore,
+        velocity:
+          mention.metadata?.redditNumComments /
+          ((Date.now() - new Date(mention.metadata.createdAt).getTime()) /
+            (1000 * 3600) +
+            1), // Example velocity calc
+        authorName: mention.author?.name, // Example mapping
+        subreddit: mention.metadata?.redditSubreddit, // Example mapping
+      };
+    });
+
+    const analyzedMentions = await Promise.all(analysisPromises);
+    console.log(
+      `API Route: Finished analyzing ${analyzedMentions.length} mentions.`
+    );
+
+    // 5. Final Sort (optional, mcpService already sorts by date) & Return
+    analyzedMentions.sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0)); // Sort by risk score
+
+    return NextResponse.json(analyzedMentions);
+  } catch (error) {
+    console.error("API Route Error [GET /api/mentions]:", error);
+    const message = error.message || "Failed to fetch or process mentions";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+
+
+// app/api/assist/route.js
+import { NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// --- Initialize Gemini ---
+if (!process.env.GEMINI_API_KEY) {
+  console.error("FATAL: GEMINI_API_KEY is not set.");
+  // Optionally throw an error during startup if the key is essential
+}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Or choose another model
+
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    const { mentionId, mentionContext } = body; // Expect mentionId and context (like text, sentiment, tone, source)
+
+    if (!mentionContext || !mentionContext.text) {
+      return NextResponse.json(
+        { error: "Mention context (including text) is required" },
+        { status: 400 }
+      );
+    }
+
+    console.log(
+      `API Route: Received assistance request for mention ID: ${mentionId}`
+    );
+
+    // --- Construct Prompt for LLM ---
+    const prompt = `
+            You are an AI assistant for a Direct-to-Consumer (DTC) brand's social media team.
+            A customer or user has posted the following online (${
+              mentionContext.source || "Unknown Source"
+            }):
+
+            "${mentionContext.text}"
+
+            Analysis indicates:
+            - Sentiment: ${mentionContext.sentiment || "N/A"}
+            - Tone: ${mentionContext.tone || "N/A"}
+            - Intent (if known): ${mentionContext.intent || "N/A"}
+
+            Based on this, provide:
+            1.  **Suggested Response:** Draft a concise, empathetic, and helpful response suitable for the platform (${
+              mentionContext.source || "the platform"
+            }). Aim to de-escalate if negative, clarify if confused, or acknowledge feedback constructively. Ask for details privately (DM/email) if needed for resolution. Keep it brand-appropriate (assume friendly but professional).
+            2.  **Engagement Strategy:** Briefly outline the key steps or goals for handling this mention (e.g., "Acknowledge -> Empathize -> Offer Private Support -> Resolve Issue").
+
+            Format your output as a JSON object with keys "suggestion" and "strategy".
+        `;
+
+    // --- Call Gemini API ---
+    console.log("API Route: Sending request to Gemini...");
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    console.log("API Route: Received response from Gemini.");
+    // console.log("Gemini Raw Response Text:", text); // For debugging
+
+    // --- Parse Gemini Response ---
+    // Attempt to parse the JSON directly from the response text
+    let assistantResponse;
+    try {
+      // Find the start and end of the JSON block (robustness)
+      const jsonStart = text.indexOf("{");
+      const jsonEnd = text.lastIndexOf("}");
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        const jsonString = text.substring(jsonStart, jsonEnd + 1);
+        assistantResponse = JSON.parse(jsonString);
+      } else {
+        // Fallback if JSON structure isn't found - use the whole text as suggestion
+        console.warn(
+          "Could not parse structured JSON from Gemini response. Using full text as suggestion."
+        );
+        assistantResponse = {
+          suggestion: text.trim(),
+          strategy: "N/A - Could not parse strategy from response.",
+        };
+      }
+    } catch (parseError) {
+      console.error("Failed to parse Gemini JSON response:", parseError);
+      console.error("Gemini Raw Text:", text); // Log raw text on error
+      // Fallback if JSON parsing fails
+      assistantResponse = {
+        suggestion: text.trim(),
+        strategy: "N/A - Error parsing strategy from response.",
+      };
+    }
+
+    return NextResponse.json(assistantResponse);
+  } catch (error) {
+    console.error("API Route Error [POST /api/assist]:", error);
+    // Handle potential Gemini API errors specifically if the SDK provides codes
+    const message = error.message || "Failed to get AI assistance";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+
+
+
+
+
+
+
