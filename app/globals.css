@@ -6,11 +6,11 @@
 @layer base {
   html {
     @apply h-full scroll-smooth;
-    color-scheme: dark;
+    /* color-scheme: dark; // Can be managed by Tailwind's dark mode or explicitly */
   }
 
   body {
-    @apply h-full bg-gray-800 text-gray-200 font-sans antialiased;
+    @apply h-full bg-gray-900 text-gray-200 font-sans antialiased; /* Default body background */
   }
 
   h1,
@@ -21,26 +21,27 @@
   h6 {
     @apply text-gray-100 font-semibold;
   }
+  /* ... other base styles ... */
+}
 
-  p {
-    @apply leading-relaxed;
+/* Custom scrollbar for webkit browsers - for a more "AI app" feel */
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-700 rounded-md;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-500 rounded-md;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
   }
 
-  a {
-    @apply text-blue-400 hover:text-blue-300;
-  }
-
-  /* Style form elements for dark mode */
-  input[type="text"],
-  input[type="search"],
-  input[type="email"],
-  input[type="password"],
-  textarea,
-  select {
-    @apply bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:ring-indigo-500 focus:border-indigo-500;
-  }
-
-  button {
-    @apply font-medium rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800;
+  /* Apply to main scrollable areas if desired, e.g., the results area in Dashboard */
+  .main-content-scrollable {
+    @apply custom-scrollbar;
   }
 }
