@@ -11,7 +11,6 @@ const formatDate = (isoString) => {
         return 'Invalid Date';
     }
 };
-
 export default function MentionItem({ mention, onAssistClick }) {
     if (!mention || !mention.id) {
         console.warn("MentionItem received an invalid 'mention' prop or missing ID. Skipping render.", mention);

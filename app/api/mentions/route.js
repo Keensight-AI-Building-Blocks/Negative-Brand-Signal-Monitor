@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchMentionsFromSources } from "@/lib/mcp/mcpService"; // Use alias or correct path
 import OpenAI from "openai";
-
 // --- Initialize OpenAI ---
 if (!process.env.OPENAI_API_KEY) {
   console.error("FATAL: OPENAI_API_KEY is not set for mentions route.");

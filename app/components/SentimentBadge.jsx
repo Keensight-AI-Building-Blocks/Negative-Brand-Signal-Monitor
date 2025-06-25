@@ -37,7 +37,6 @@ const BADGE_STYLES = {
         default: 'bg-gray-700 text-gray-300 border border-gray-600',
     },
 };
-
 export default function SentimentBadge({ type = 'sentiment', value }) {
     // Handle null, undefined, or empty string values gracefully
     if (value === null || value === undefined || value === '') return null;

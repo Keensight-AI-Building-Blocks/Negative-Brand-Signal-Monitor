@@ -12,7 +12,6 @@ export default function ResponseAssistant({ mention, response, isLoading, error,
     // Defensive check for response structure (optional but good practice)
     const suggestion = response?.suggestion ?? null;
     const strategy = response?.strategy ?? null;
-
     return (
         // Modal Backdrop
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-out">

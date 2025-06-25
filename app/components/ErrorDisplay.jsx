@@ -1,6 +1,5 @@
 // app/components/ErrorDisplay.jsx
 import React from 'react';
-
 export default function ErrorDisplay({ message, onRetry, isMinor = false }) {
     const baseClasses = "p-4 rounded-md border";
     const colorClasses = isMinor

@@ -9,7 +9,6 @@ import SearchHistorySidebar from './SearchHistorySidebar'; // Import the new com
 import { fetchMentions, fetchAssistance } from '../lib/api';
 
 const MAX_HISTORY_ITEMS = 10;
-
 export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeSearchTerm, setActiveSearchTerm] = useState('');

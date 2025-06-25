@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-
 // --- Initialize OpenAI ---
 if (!process.env.OPENAI_API_KEY) {
   console.error("FATAL: OPENAI_API_KEY is not set for assist route.");

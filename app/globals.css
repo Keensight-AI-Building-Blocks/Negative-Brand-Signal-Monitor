@@ -21,7 +21,6 @@
   h6 {
     @apply text-gray-100 font-semibold;
   }
-  /* ... other base styles ... */
 }
 
 /* Custom scrollbar for webkit browsers - for a more "AI app" feel */

@@ -15,7 +15,6 @@ export default function MentionList({ mentions, onAssistClick }) {
     if (mentions.length === 0) {
         return null;
     }
-
     return (
         <div className="space-y-4">
             {mentions.map((mention) => (

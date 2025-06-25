@@ -1,10 +1,10 @@
 // app/layout.js
 import "./globals.css";
-
 export const metadata = {
   title: "NBSM - Brand Signal Monitor",
   description: "Monitor negative brand signals for DTC startups",
 };
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="dark">
