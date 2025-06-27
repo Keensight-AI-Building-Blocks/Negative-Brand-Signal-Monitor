@@ -1,4 +1,4 @@
-// lib/mcp/modelContext.js (or .ts if using TypeScript)
+// lib/mcp/modelContext.js
 
 export const createModelContext = ({
   id,
