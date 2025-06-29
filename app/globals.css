@@ -1,3 +1,146 @@
-/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* All content has been removed */
+/*
+  1. Dark Mode Theme using CSS Variables.
+  2. Classes for a table-like layout for mentions.
+  3. Styles for a blue progress bar.
+*/
+
+:root {
+  --bg-color: #1a202c;
+  --surface-color: #2d3748;
+  --border-color: #4a5568;
+  --text-primary: #e2e8f0;
+  --text-secondary: #a0aec0;
+  --primary-blue: #3182ce;
+  --primary-blue-hover: #4299e1;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: var(--bg-color);
+  margin: 0;
+  color: var(--text-primary);
+}
+
+h2,
+h3 {
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+/* --- Table Layout Styles --- */
+/* Apply these classes to your MentionList and MentionItem components */
+.mention-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mention-table-header,
+.mention-table-row {
+  display: grid;
+  grid-template-columns: 150px minmax(300px, 1fr) 150px;
+  align-items: center;
+}
+
+.mention-table-header .mention-table-cell {
+  background-color: var(--surface-color);
+  font-weight: bold;
+  padding: 12px 15px;
+}
+
+.mention-table-cell {
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.mention-table-row:last-child .mention-table-cell {
+  border-bottom: none;
+}
+
+/* --- Progress Bar Styles --- */
+/* Add this HTML structure where you show the loading state. */
+/* JavaScript is required to update the seconds. */
+.progress-container {
+  width: 100%;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+  height: 10px;
+  background-color: var(--primary-blue);
+  border-radius: 8px;
+  /* The width should be updated by JavaScript from 0% to 100% */
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.9em;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* --- General Element Styles --- */
+aside {
+  background-color: var(--bg-color);
+  border-right: 1px solid var(--border-color);
+  padding: 20px;
+  min-width: 220px;
+}
+
+main {
+  padding: 20px;
+}
+
+input[type="text"] {
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+button {
+  padding: 8px 14px;
+  border: 1px solid var(--primary-blue);
+  background-color: var(--primary-blue);
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: var(--primary-blue-hover);
+}
+
+input[disabled],
+button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--surface-color);
+  border-color: var(--border-color);
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 20px 0;
+}
+
+form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}

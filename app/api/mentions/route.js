@@ -1,5 +1,7 @@
+// app/api/mentions/route.js
+
 import { NextResponse } from "next/server";
-import { fetchMentionsFromSources } from "@/lib/mcp/mcpService"; // Use alias or correct path
+import { fetchMentionsFromSources } from "../../lib/mcp/mcpService"; // Use alias or correct path
 import OpenAI from "openai";
 // --- Initialize OpenAI ---
 if (!process.env.OPENAI_API_KEY) {
@@ -42,7 +44,6 @@ async function analyzeMentionWithOpenAI(text) {
       "riskLevel": "High"
     }
   `;
-
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo-1106", // Or another model that supports JSON mode
@@ -53,7 +54,6 @@ async function analyzeMentionWithOpenAI(text) {
       ],
       temperature: 0.2,
     });
-
     const analysisResult = JSON.parse(response.choices[0].message.content);
     return analysisResult;
   } catch (error) {
@@ -127,7 +127,6 @@ export async function GET(request) {
   const brandQuery = searchParams.get("brandQuery");
   const sourcesParam = searchParams.get("sources");
   const requestedSources = sourcesParam ? sourcesParam.split(",") : undefined;
-
   if (!brandQuery) {
     return NextResponse.json(
       { error: "Brand query is required" },
@@ -147,7 +146,6 @@ export async function GET(request) {
       return NextResponse.json([]);
     }
     console.log(`API Route: Received ${mentions.length} mentions from MCP.`);
-
     // --- Analyze all mentions in parallel ---
     const analysisPromises = mentions.map((mention) =>
       analyzeMentionWithOpenAI(mention.text)
@@ -156,7 +154,6 @@ export async function GET(request) {
     console.log(
       `API Route: Finished analyzing ${analyses.length} mentions with OpenAI.`
     );
-
     const analyzedMentions = mentions.map((mention, index) => {
       const aiAnalysis = analyses[index];
       const riskScore = calculateRiskScore(mention, aiAnalysis);
