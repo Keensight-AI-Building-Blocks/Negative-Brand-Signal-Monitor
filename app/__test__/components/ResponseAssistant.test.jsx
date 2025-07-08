@@ -2,9 +2,8 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest'; // Corrected: Import vitest functions
 import ResponseAssistant from '../../components/ResponseAssistant';
-
 const mockMention = {
     id: 't3_123',
     text: 'This product is amazing!',
@@ -13,7 +12,6 @@ const mockMention = {
     tone: 'Joyful',
     url: 'http://reddit.com/r/all/comments/123',
 };
-
 describe('ResponseAssistant', () => {
     it('renders nothing if no mention is provided', () => {
         const { container } = render(<ResponseAssistant mention={null} />);
@@ -40,7 +38,6 @@ describe('ResponseAssistant', () => {
         expect(screen.getByText('Warning:')).toBeInTheDocument();
         expect(screen.getByText('Failed to generate')).toBeInTheDocument();
     });
-
     it('displays the suggestion and strategy when the response is successful', () => {
         const mockResponse = {
             suggestion: 'Thank you so much!',
@@ -52,7 +49,6 @@ describe('ResponseAssistant', () => {
         expect(screen.getByText('Engagement Strategy:')).toBeInTheDocument();
         expect(screen.getByText(mockResponse.strategy)).toBeInTheDocument();
     });
-
     it('calls the onClose function when the close button is clicked', () => {
         const handleClose = vi.fn();
         render(<ResponseAssistant mention={mockMention} onClose={handleClose} />);

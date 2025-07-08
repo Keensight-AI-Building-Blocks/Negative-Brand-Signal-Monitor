@@ -2,18 +2,16 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest'; // Corrected: Import vitest functions
 import MentionList from '../../components/MentionList';
-
 const mockMentions = [
     { id: '1', text: 'First mention' },
     { id: '2', text: 'Second mention' },
 ];
-
 // Mock the MentionItem to simplify the test
 vi.mock('../../components/MentionItem', () => ({
     default: ({ mention }) => <div data-testid="mention-item">{mention.text}</div>,
 }));
-
 describe('MentionList', () => {
     it('renders the table header', () => {
         render(<MentionList mentions={mockMentions} />);

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest'; // Corrected: Import vitest functions
 import Dashboard from '../../components/Dashboard';
 import * as api from '../../lib/api';
 
@@ -86,7 +86,6 @@ describe('Dashboard', () => {
             expect(screen.getByText('No mentions found for "Microsoft".')).toBeInTheDocument();
         });
     });
-
     it('updates search history after a successful search', async () => {
         api.fetchMentions.mockResolvedValue([{ id: '1', text: 'mention', riskScore: 50 }]);
         render(<Dashboard />);

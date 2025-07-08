@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest'; // Corrected: Import vitest functions
 import LoadingSpinner from '../../components/LoadingSpinner';
-
 describe('LoadingSpinner', () => {
     it('renders with the default text "Loading..."', () => {
         render(<LoadingSpinner />);

@@ -2,14 +2,13 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest'; // Corrected: Import vitest functions
 import MentionItem from '../../components/MentionItem';
 
 // Mock date-fns to return a consistent date
 vi.mock('date-fns', () => ({
     formatDistanceToNow: () => 'about 1 hour ago',
 }));
-
 const mockMention = {
     id: 'm1',
     text: 'The new feature is confusing.',
@@ -21,7 +20,6 @@ const mockMention = {
     riskScore: 75,
     url: 'http://example.com/mention1',
 };
-
 describe('MentionItem', () => {
     it('renders mention details correctly', () => {
         render(<MentionItem mention={mockMention} onAssistClick={() => { }} />);
@@ -48,7 +46,6 @@ describe('MentionItem', () => {
         expect(handleAssistClick).toHaveBeenCalledTimes(1);
         expect(handleAssistClick).toHaveBeenCalledWith(mockMention);
     });
-
     it('handles missing author and subreddit gracefully', () => {
         const mentionWithoutAuthor = { ...mockMention, author: null, metadata: {} };
         render(<MentionItem mention={mentionWithoutAuthor} onAssistClick={() => { }} />);

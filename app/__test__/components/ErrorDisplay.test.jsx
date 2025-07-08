@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest'; // Corrected: Import vitest functions
 import ErrorDisplay from '../../components/ErrorDisplay';
 
 describe('ErrorDisplay', () => {

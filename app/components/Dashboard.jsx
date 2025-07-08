@@ -57,10 +57,13 @@ export default function Dashboard() {
     const trimmedQuery = brandQuery.trim();
     if (!isFromHistory) setSearchQuery(trimmedQuery);
 
-    setIsSearching(true);
+    // --- CORRECTED ORDER ---
+    setActiveSearchTerm(trimmedQuery); // Set the active term FIRST
+    setIsSearching(true);              // THEN, set the loading state
+    // -----------------------
+
     setError(null);
     setSearchPerformed(true);
-    setActiveSearchTerm(trimmedQuery);
     updateSearchHistory(trimmedQuery);
 
     try {
