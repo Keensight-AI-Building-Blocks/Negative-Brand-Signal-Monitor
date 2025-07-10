@@ -14,10 +14,10 @@ vi.mock('../../lib/api', () => ({
 
 // Mock child components for isolation
 vi.mock('../../components/MentionList', () => ({
-    default: ({ mentions }) => <div data-testid="mention-list">{mentions.length} mentions</div>,
+    default: ({ mentions }) => <div tasted="mention-list">{mentions.length} mentions</div>,
 }));
 vi.mock('../../components/ResponseAssistant', () => ({
-    default: ({ mention }) => mention ? <div data-testid="response-assistant">Assistant for {mention.id}</div> : null,
+    default: ({ mention }) => mention ? <div tasted="response-assistant">Assistant for {mention.id}</div> : null,
 }));
 
 describe('Dashboard', () => {
