@@ -1,15 +1,12 @@
-// app/api/mentions/route.js
-
 import { NextResponse } from "next/server";
-import { fetchMentionsFromSources } from "../../lib/mcp/mcpService"; // Use alias or correct path
+import { fetchMentionsFromSources } from "../../lib/mcp/mcpService";
 import OpenAI from "openai";
-// --- Initialize OpenAI ---
+
 if (!process.env.OPENAI_API_KEY) {
   console.error("FATAL: OPENAI_API_KEY is not set for mentions route.");
 }
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// --- NEW: OpenAI Analysis Helper ---
 async function analyzeMentionWithOpenAI(text) {
   if (!text || text.trim() === "") {
     console.warn("OpenAI Analysis: Empty text provided. Skipping analysis.");
@@ -19,20 +16,21 @@ async function analyzeMentionWithOpenAI(text) {
       tone: "Unknown",
       intent: "Unknown",
       keyPhrases: [],
-      riskLevel: "Low", // Default to low if no text to analyze
+      riskLevel: "Low",
+      isOffensive: false,
       error: "Empty text provided",
     };
   }
 
   const system_prompt = `
-    You are an expert text analyst. Analyze the following user-provided text.
-    Provide the analysis as a valid JSON object with ONLY the following keys and no other explanatory text:
+    You are an expert text analyst. Analyze the following user-provided text. Provide the analysis as a valid JSON object with ONLY the following keys and no other explanatory text:
     - "sentiment": (String: "Positive", "Negative", or "Neutral")
     - "sentimentScore": (Number: from 0.0 to 1.0, where 0.0 is very negative, 0.5 is neutral, and 1.0 is very positive)
     - "tone": (String: The dominant tone, e.g., "Angry", "Confused", "Sarcastic", "Joyful", "Sad", "Appreciative", "Frustrated")
     - "intent": (String: The likely intent, e.g., "Complaint", "Question", "Feedback", "Compliment", "Rant", "Seeking Information", "Sharing Experience")
     - "keyPhrases": (Array of strings: List of 3-5 key phrases crucial for understanding the context)
     - "riskLevel": (String: "Low", "Medium", or "High" - based on overall negativity, urgency, potential for reputational damage, or calls for action)
+    - "isOffensive": (Boolean: true if the text contains hate speech, vulgar language, personal attacks, or clearly offensive content, otherwise false)
 
     Example JSON output:
     {
@@ -41,12 +39,14 @@ async function analyzeMentionWithOpenAI(text) {
       "tone": "Frustrated",
       "intent": "Complaint",
       "keyPhrases": ["product broke", "customer service unresponsive", "very disappointed"],
-      "riskLevel": "High"
+      "riskLevel": "High",
+      "isOffensive": false
     }
   `;
+
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-1106", // Or another model that supports JSON mode
+      model: "gpt-3.5-turbo-1106",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system_prompt },
@@ -70,13 +70,13 @@ async function analyzeMentionWithOpenAI(text) {
       tone: "API Error",
       intent: "API Error",
       keyPhrases: [],
-      riskLevel: "Medium", // Default to medium risk on API error to be safe
+      riskLevel: "Medium",
+      isOffensive: false,
       error: `OpenAI API call failed: ${error.message || "Unknown error"}`,
     };
   }
 }
 
-// --- ADAPTED: Calculate Risk Score ---
 function calculateRiskScore(mentionContext, aiAnalysis) {
   let riskScore = 50;
   if (!aiAnalysis || aiAnalysis.error) {
@@ -121,12 +121,12 @@ function calculateRiskScore(mentionContext, aiAnalysis) {
   return Math.max(0, Math.min(100, Math.round(riskScore)));
 }
 
-// --- Main GET Handler ---
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const brandQuery = searchParams.get("brandQuery");
   const sourcesParam = searchParams.get("sources");
   const requestedSources = sourcesParam ? sourcesParam.split(",") : undefined;
+
   if (!brandQuery) {
     return NextResponse.json(
       { error: "Brand query is required" },
@@ -146,7 +146,7 @@ export async function GET(request) {
       return NextResponse.json([]);
     }
     console.log(`API Route: Received ${mentions.length} mentions from MCP.`);
-    // --- Analyze all mentions in parallel ---
+
     const analysisPromises = mentions.map((mention) =>
       analyzeMentionWithOpenAI(mention.text)
     );
@@ -154,18 +154,10 @@ export async function GET(request) {
     console.log(
       `API Route: Finished analyzing ${analyses.length} mentions with OpenAI.`
     );
+
     const analyzedMentions = mentions.map((mention, index) => {
       const aiAnalysis = analyses[index];
       const riskScore = calculateRiskScore(mention, aiAnalysis);
-
-      let velocity = 0;
-      if (mention.metadata?.redditNumComments && mention.metadata?.createdAt) {
-        const ageHours =
-          (Date.now() - new Date(mention.metadata.createdAt).getTime()) /
-          (1000 * 3600);
-        velocity =
-          mention.metadata.redditNumComments / (ageHours > 0 ? ageHours : 1); // Avoid division by zero
-      }
 
       return {
         ...mention,
@@ -175,11 +167,7 @@ export async function GET(request) {
         intent: aiAnalysis?.intent || "Pending",
         keyPhrases: aiAnalysis?.keyPhrases || [],
         riskScore: riskScore,
-        geminiRiskLevel: aiAnalysis?.riskLevel || "Pending", // Keeping this key for frontend compatibility
-        threadPopularity: mention.metadata?.redditScore,
-        velocity: parseFloat(velocity.toFixed(2)),
-        authorName: mention.author?.name,
-        subreddit: mention.metadata?.redditSubreddit,
+        isOffensive: aiAnalysis?.isOffensive || false, // Add the offensive flag
         analysisError: aiAnalysis?.error,
       };
     });

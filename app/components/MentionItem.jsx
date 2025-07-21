@@ -1,20 +1,7 @@
-// app/components/MentionItem.jsx
-
-import React from 'react';
+import React, { useState } from 'react';
 import SentimentBadge from './SentimentBadge';
-import { formatDistanceToNow } from 'date-fns';
 
-const formatDate = (isoString) => {
-    if (!isoString) return 'Date N/A';
-    try {
-        return formatDistanceToNow(new Date(isoString), { addSuffix: true });
-    } catch (e) {
-        console.error("Date formatting error:", e, "Input:", isoString);
-        return 'Invalid Date';
-    }
-};
-
-export default function MentionItem({ mention, onAssistClick }) {
+export default function MentionItem({ mention }) {
     if (!mention || !mention.id) {
         return (
             <div className="mention-table-row">
@@ -26,13 +13,14 @@ export default function MentionItem({ mention, onAssistClick }) {
     }
 
     const {
-        url, text, author, metadata, sentiment, tone, intent, riskScore,
+        url, text, author, metadata, sentiment, tone, intent, riskScore, isOffensive
     } = mention;
+
+    const [isCensored, setIsCensored] = useState(isOffensive); // State to control censorship
 
     const displayAuthorName = author?.name || 'Unknown Author';
     const displaySubreddit = metadata?.redditSubreddit || '';
 
-    // This is the new table row structure
     return (
         <div className="mention-table-row">
             {/* Cell 1: Author Info */}
@@ -46,7 +34,14 @@ export default function MentionItem({ mention, onAssistClick }) {
 
             {/* Cell 2: Mention Details */}
             <div className="mention-table-cell">
-                <p style={{ margin: '0 0 12px 0' }}>{text || 'No content available.'}</p>
+                <p
+                    style={{ margin: '0 0 12px 0' }}
+                    className={isCensored ? 'censored-text' : ''}
+                    onClick={() => isCensored && setIsCensored(false)}
+                    title={isCensored ? 'Click to reveal content' : ''}
+                >
+                    {text || 'No content available.'}
+                </p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <SentimentBadge type="sentiment" value={sentiment || 'Pending'} />
                     <SentimentBadge type="tone" value={tone || 'Pending'} />
@@ -63,12 +58,7 @@ export default function MentionItem({ mention, onAssistClick }) {
                 ) : (
                     <span>No Link</span>
                 )}
-                <button
-                    onClick={() => onAssistClick(mention)}
-                    style={{ width: '100%' }}
-                >
-                    Suggest Response
-                </button>
+                {/* "Suggest Response" button is now completely removed. */}
             </div>
         </div>
     );

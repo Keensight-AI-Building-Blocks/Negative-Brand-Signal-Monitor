@@ -1,136 +1,102 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /*
-  1. Dark Mode Theme using CSS Variables.
-  2. Classes for a table-like layout for mentions.
-  3. Styles for a blue progress bar.
+  ================================================================================
+  NBSM - Brand Signal Monitor UI Overhaul
+  ================================================================================
+  1.  Enhanced Dark & New Light Theme using CSS Variables.
+  2.  Modern Typography with 'Inter' font.
+  3.  Polished, interactive styles for all components (tables, forms, buttons).
+  4.  Improved Censorship effect with clearer user feedback.
+  5.  Custom styled scrollbars for a cohesive look.
+  ================================================================================
 */
 
+/* --- THEME & COLOR PALETTE --- */
 :root {
-  --bg-color: #1a202c;
-  --surface-color: #2d3748;
-  --border-color: #4a5568;
-  --text-primary: #e2e8f0;
-  --text-secondary: #a0aec0;
-  --primary-blue: #3182ce;
-  --primary-blue-hover: #4299e1;
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Universal */
+  --radius: 0.5rem;
+  --transition-speed: 0.2s;
+
+  /* Light Theme (Default) */
+  --bg-color: #000000; /* Off-white */
+  --surface-color: #000000; /* Pure white for cards/surfaces */
+  --surface-hover-color: #0d0d0d;
+  --border-color: #535353;
+  --text-primary: #e3e3e3;
+  --text-secondary: #6c757d;
+  --text-tertiary: #adb5bd;
+
+  --primary-blue: #003f82;
+  --primary-blue-hover: #0069d9;
+  --primary-blue-text: #ffffff;
+
+  --censored-blur: 3px;
+  --censored-bg: rgba(255, 255, 255, 0.5);
+
+  --scrollbar-thumb: #ced4da;
+  --scrollbar-thumb-hover: #adb5bd;
 }
 
+html[data-theme="dark"] {
+  --bg-color: #121212;
+  --surface-color: #1e1e1e;
+  --surface-hover-color: #2a2a2a;
+  --border-color: #333333;
+  --text-primary: #e2e8f0;
+  --text-secondary: #a0aec0;
+  --text-tertiary: #718096;
+
+  --primary-blue: #3182ce;
+  --primary-blue-hover: #4299e1;
+  --primary-blue-text: #ffffff;
+
+  --censored-blur: 5px;
+  --censored-bg: rgba(29, 29, 29, 0.5);
+
+  --scrollbar-thumb: #4a5568;
+  --scrollbar-thumb-hover: #718096;
+}
+
+/* --- BASE & TYPOGRAPHY --- */
 body {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--bg-color);
-  margin: 0;
   color: var(--text-primary);
+  margin: 0;
+  line-height: 1.6;
+  transition: background-color var(--transition-speed) ease,
+    color var(--transition-speed) ease;
 }
 
 h2,
 h3 {
-  margin-bottom: 12px;
   color: var(--text-primary);
+  font-weight: 600;
 }
 
-/* --- Table Layout Styles --- */
-/* Apply these classes to your MentionList and MentionItem components */
-.mention-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  overflow: hidden;
+h2 {
+  font-size: 1.75rem;
+}
+h3 {
+  font-size: 1.25rem;
 }
 
-.mention-table-header,
-.mention-table-row {
-  display: grid;
-  grid-template-columns: 150px minmax(300px, 1fr) 150px;
-  align-items: center;
+a {
+  color: var(--primary-blue);
+  text-decoration: none;
+  transition: color var(--transition-speed) ease;
 }
-
-.mention-table-header .mention-table-cell {
-  background-color: var(--surface-color);
-  font-weight: bold;
-  padding: 12px 15px;
-}
-
-.mention-table-cell {
-  padding: 12px 15px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.mention-table-row:last-child .mention-table-cell {
-  border-bottom: none;
-}
-
-/* --- Progress Bar Styles --- */
-/* Add this HTML structure where you show the loading state. */
-/* JavaScript is required to update the seconds. */
-.progress-container {
-  width: 100%;
-  background-color: var(--surface-color);
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-}
-
-.progress-bar {
-  height: 10px;
-  background-color: var(--primary-blue);
-  border-radius: 8px;
-  /* The width should be updated by JavaScript from 0% to 100% */
-  width: 0%;
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  font-size: 0.9em;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-/* --- General Element Styles --- */
-aside {
-  background-color: var(--bg-color);
-  border-right: 1px solid var(--border-color);
-  padding: 20px;
-  min-width: 220px;
-}
-
-main {
-  padding: 20px;
-}
-
-input[type="text"] {
-  padding: 10px;
-  border: 1px solid var(--border-color);
-  background-color: var(--surface-color);
-  color: var(--text-primary);
-  border-radius: 4px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-button {
-  padding: 8px 14px;
-  border: 1px solid var(--primary-blue);
-  background-color: var(--primary-blue);
-  color: var(--text-primary);
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-button:hover {
-  background-color: var(--primary-blue-hover);
-}
-
-input[disabled],
-button[disabled] {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background-color: var(--surface-color);
-  border-color: var(--border-color);
+a:hover {
+  text-decoration: underline;
+  color: var(--primary-blue-hover);
 }
 
 hr {
@@ -139,8 +105,194 @@ hr {
   margin: 20px 0;
 }
 
+/* --- LAYOUT: SIDEBAR & MAIN --- */
+aside {
+  background-color: var(--surface-color);
+  border-right: 1px solid var(--border-color);
+  padding: 1.5rem;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  transition: background-color var(--transition-speed) ease,
+    border-color var(--transition-speed) ease;
+}
+
+main {
+  padding: 1.5rem 2rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* --- FORMS & CONTROLS --- */
 form {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+input[type="text"] {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  border-radius: var(--radius);
+  transition: border-color var(--transition-speed) ease,
+    box-shadow var(--transition-speed) ease;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-blue) 25%, transparent);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--primary-blue);
+  width: 1rem;
+  height: 1rem;
+}
+
+/* --- BUTTONS --- */
+button,
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color var(--transition-speed) ease,
+    border-color var(--transition-speed) ease,
+    opacity var(--transition-speed) ease;
+  white-space: nowrap;
+}
+
+/* Primary Button */
+button[type="submit"],
+.button-primary {
+  background-color: var(--primary-blue);
+  color: var(--primary-blue-text);
+  border-color: var(--primary-blue);
+}
+button[type="submit"]:hover,
+.button-primary:hover {
+  background-color: var(--primary-blue-hover);
+  border-color: var(--primary-blue-hover);
+}
+
+/* Secondary Button */
+button,
+.button-secondary {
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+button:hover,
+.button-secondary:hover {
+  background-color: var(--surface-hover-color);
+  border-color: color-mix(in srgb, var(--text-primary) 50%, transparent);
+}
+
+/* Disabled State */
+input:disabled,
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button:disabled:hover {
+  background-color: initial; /* Reset hover on disabled */
+  border-color: initial;
+}
+
+/* --- MENTION TABLE --- */
+.mention-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background-color: var(--surface-color);
+}
+
+.mention-table-header,
+.mention-table-row {
+  display: grid;
+  grid-template-columns: 180px minmax(300px, 1fr) 160px;
+  align-items: start; /* Align top for better readability */
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color var(--transition-speed) ease;
+}
+
+.mention-table-row:last-child {
+  border-bottom: none;
+}
+
+.mention-table-row:hover {
+  background-color: var(--surface-hover-color);
+}
+
+.mention-table-header .mention-table-cell {
+  background-color: color-mix(
+    in srgb,
+    var(--surface-color) 50%,
+    var(--bg-color)
+  );
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1.5rem;
+}
+
+.mention-table-cell {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.mention-table-cell:not(:last-child) {
+  border-right: 1px solid var(--border-color);
+}
+
+.mention-table-cell strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* --- CENSORSHIP EFFECT --- */
+.censored-text {
+  filter: blur(var(--censored-blur));
+  background-color: var(--censored-bg);
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: filter var(--transition-speed) ease-in-out,
+    background-color var(--transition-speed) ease-in-out;
+}
+
+.censored-text:hover {
+  filter: blur(calc(var(--censored-blur) - 2px));
+  background-color: transparent;
+}
+
+/* --- CUSTOM SCROLLBARS --- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-color);
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
 }

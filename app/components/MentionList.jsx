@@ -1,9 +1,7 @@
-// app/components/MentionList.jsx
-
 import React from 'react';
 import MentionItem from './MentionItem';
 
-export default function MentionList({ mentions, onAssistClick }) {
+export default function MentionList({ mentions }) {
     if (!mentions) {
         return <p>Loading mentions or an unexpected error occurred.</p>;
     }
@@ -28,7 +26,6 @@ export default function MentionList({ mentions, onAssistClick }) {
                     <MentionItem
                         key={mention.id || `mention-${Math.random()}`}
                         mention={mention}
-                        onAssistClick={onAssistClick}
                     />
                 ))}
             </div>

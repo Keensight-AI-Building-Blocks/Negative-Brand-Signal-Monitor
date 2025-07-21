@@ -1,66 +1,53 @@
-// lib/api.js  
-import axios from "axios"; // Use axios or native fetch
-
+// lib/api.js
 /**
- * Fetches prioritized mentions for a specific brand query from the backend API.
- * @param {string} brandQuery - The brand name to search for.
+ * Fetches mentions for a given brand query from the backend API.
+ * @param {string} brandQuery - The brand to search for.
+ * @returns {Promise<Array>} A promise that resolves to an array of mentions.
  */
 export async function fetchMentions(brandQuery) {
-  console.log(`API Lib: Fetching mentions for query: "${brandQuery}"...`);
-  if (!brandQuery || brandQuery.trim() === "") {
-    console.log("API Lib: No query provided, returning empty array.");
-    return [];
+  const response = await fetch(
+    `/api/mentions?brandQuery=${encodeURIComponent(brandQuery)}`
+  );
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to fetch mentions");
   }
-
-  try {
-    // Use a relative URL to call the internal Next.js API route
-    const response = await axios.get(
-      `/api/mentions?brandQuery=${encodeURIComponent(brandQuery.trim())}`
-    );
-    console.log(
-      `API Lib: Received ${response.data?.length ?? 0} mentions from backend.`
-    );
-    return response.data || []; // Ensure returning an array
-  } catch (error) {
-    console.error(
-      "API Lib Error fetching mentions:",
-      error.response?.data || error.message
-    );
-    // Throw a more specific error message to the component
-    const errorMessage =
-      error.response?.data?.error ||
-      `Failed to fetch mentions for "${brandQuery}". Check network or server logs.`;
-    throw new Error(errorMessage);
-  }
+  return response.json();
 }
 
 /**
- * Requests AI assistance for a specific mention from the backend API.
+ * Requests AI-powered response assistance for a specific mention.
  * @param {string} mentionId - The ID of the mention.
- * @param {object} mentionContext - Relevant details (text, sentiment, tone, source etc.).
+ * @param {object} mentionContext - The full context of the mention.
+ * @returns {Promise<object>} A promise that resolves to the AI-generated suggestion and strategy.
  */
 export async function fetchAssistance(mentionId, mentionContext) {
-  console.log(`API Lib: Fetching assistance for mention ${mentionId}...`);
-  if (!mentionId || !mentionContext) {
-    throw new Error("Mention ID and context are required for assistance.");
+  const response = await fetch("/api/assist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mentionId, mentionContext }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to fetch assistance");
   }
+  return response.json();
+}
 
-  try {
-    // Use a relative URL to call the internal Next.js API route
-    const response = await axios.post("/api/assist", {
-      mentionId,
-      mentionContext,
-    });
-    console.log("API Lib: Received assistance from backend.");
-    return response.data;
-  } catch (error) {
-    console.error(
-      "API Lib Error fetching assistance:",
-      error.response?.data || error.message
-    );
-    const errorMessage =
-      error.response?.data?.error ||
-      "Failed to get AI assistance. Check network or server logs.";
-    throw new Error(errorMessage);
+/**
+ * Verifies if a search query corresponds to a real brand.
+ * @param {string} query - The search term to verify.
+ * @returns {Promise<{isBrand: boolean, brandName: string}>} A promise that resolves to the verification result.
+ */
+export async function verifyBrand(query) {
+  const response = await fetch("/api/verify-brand", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Brand verification failed");
   }
+  return response.json();
 }
